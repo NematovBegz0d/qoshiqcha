@@ -1,0 +1,22 @@
+{
+  "name": "qoshiqcha-bot",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "node --test src/__tests__/*.test.js",
+    "seed:products": "node src/seedProducts.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2",
+    "firebase-admin": "^12.7.0",
+    "telegraf": "^4.16.3"
+  }
+}

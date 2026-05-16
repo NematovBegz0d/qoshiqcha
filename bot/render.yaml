@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: qoshiqcha-bot
+    runtime: node
+    buildCommand: npm install
+    startCommand: node src/index.js
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: BOT_TOKEN
+        sync: false
+      - key: ADMIN_CHAT_ID
+        sync: false
+      - key: ADMIN_TELEGRAM_IDS
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT
+        sync: false
+      - key: WEB_APP_URL
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: PORT
+        value: "3005"
+      - key: BOT_POLLING
+        value: "true"

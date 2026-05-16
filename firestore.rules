@@ -1,0 +1,64 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── products ────────────────────────────────────────────────────────────
+    // Hamma o'qiydi. Yozish faqat Firebase Admin SDK (backend) orqali —
+    // Admin SDK barcha rules'ni chetlab o'tadi, shu sababli client write yopiq.
+    match /products/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ── categories ──────────────────────────────────────────────────────────
+    match /categories/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ── settings ────────────────────────────────────────────────────────────
+    // MUHIM: settings/global faqat ommaviy do'kon sozlamalarini saqlaydi:
+    //   deliveryPrice, freeDeliveryFrom, minOrderPrice, workingHours, shopIsOpen
+    // adminTelegramIds yoki boshqa maxfiy ma'lumot bu documentga YOZILMASIN.
+    // Backend taraf cleanSettingsPatch() validatsiyasi bu kafolatni ta'minlaydi.
+    //
+    // settings/private — maxfiy konfiguratsiya uchun alohida document.
+    // Admin SDK (backend) o'qiy oladi, client SDK o'qiy olmaydi.
+    match /settings/private {
+      allow read, write: if false;
+    }
+    match /settings/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ── promotions ──────────────────────────────────────────────────────────
+    match /promotions/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ── orders ──────────────────────────────────────────────────────────────
+    // Buyurtmalarda shaxsiy ma'lumotlar (telefon, manzil) bor.
+    // Client SDK orqali kirish to'liq yopiq.
+    // Barcha operatsiyalar backend (Admin SDK + Telegram initData tekshiruvi) orqali.
+    match /orders/{id} {
+      allow read, write: if false;
+    }
+
+    // ── reviews ─────────────────────────────────────────────────────────────
+    // O'qish barchaga ochiq.
+    // Yozish yopiq — POST /api/reviews backend endpoint orqali (initData tekshiruvi bilan).
+    match /reviews/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ── fallback ─────────────────────────────────────────────────────────────
+    // Yuqorida ko'rsatilmagan barcha collection va documentlar — to'liq yopiq.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

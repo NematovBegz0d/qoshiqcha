@@ -1,0 +1,48 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+.output
+.vinxi
+.tanstack/**
+.nitro
+*.local
+
+# Wrangler / Cloudflare
+.wrangler/
+.dev.vars
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Environment variables — HECH QACHON gitga qo'shma
+# .env.* barcha variantlarini qamrab oladi (.env.staging, .env.production, ...)
+.env
+.env.*
+bot/.env
+bot/.env.*
+
+# .example va .example.* fayllar gitga tushishi kerak (maxfiy ma'lumot yo'q)
+!.env.example
+!bot/.env.example
+
+# Firebase service account fayllar (JSON shaklida saqlansa)
+serviceAccount*.json
+*-firebase-adminsdk-*.json
+*.pem
