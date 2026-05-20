@@ -114,8 +114,39 @@ app.get("/healthz/telegram", async (_, res) => {
     });
   }
 });
+app.get("/healthz/telegram/ensure-webhook", async (_, res) => {
+  if (!env.BOT_WEBHOOK_URL) {
+    res.status(400).json({ ok: false, error: "BOT_WEBHOOK_URL is not configured" });
+    return;
+  }
+
+  try {
+    const webhook = await setTelegramWebhook();
+    res.json({
+      ok: true,
+      webhookUrl: webhook.url,
+      pendingUpdateCount: webhook.pending_update_count,
+      lastErrorDate: webhook.last_error_date ?? null,
+      lastErrorMessage: webhook.last_error_message ?? null,
+    });
+  } catch (err) {
+    res.status(502).json({
+      ok: false,
+      error: err instanceof Error ? err.message : "Telegram webhook setup failed",
+    });
+  }
+});
 
 const deps = { db, admin, bot };
+
+async function setTelegramWebhook() {
+  const webhookOptions = env.BOT_WEBHOOK_SECRET
+    ? { secret_token: env.BOT_WEBHOOK_SECRET }
+    : undefined;
+
+  await bot.telegram.setWebhook(env.BOT_WEBHOOK_URL, webhookOptions);
+  return bot.telegram.getWebhookInfo();
+}
 
 app.use("/api/orders", createOrdersRouter(deps));
 app.use("/api/admin/orders", createAdminOrdersRouter(deps));
@@ -136,12 +167,7 @@ if (env.BOT_POLLING) {
   process.once("SIGINT", () => bot.stop("SIGINT"));
   process.once("SIGTERM", () => bot.stop("SIGTERM"));
 } else if (env.BOT_WEBHOOK_URL) {
-  const webhookOptions = env.BOT_WEBHOOK_SECRET
-    ? { secret_token: env.BOT_WEBHOOK_SECRET }
-    : undefined;
-
-  bot.telegram
-    .setWebhook(env.BOT_WEBHOOK_URL, webhookOptions)
+  setTelegramWebhook()
     .then(() => console.log(`Bot webhook set: ${env.BOT_WEBHOOK_URL}`))
     .catch((err) => {
       console.error("Bot webhook setup failed:", err);

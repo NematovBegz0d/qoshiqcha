@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { createHash } from "node:crypto";
 
 function cleanString(value) {
   return typeof value === "string" ? value.trim() : "";
@@ -32,6 +33,15 @@ function resolveWebhookUrl(path) {
 
   const renderHostname = optionalString("RENDER_EXTERNAL_HOSTNAME");
   return renderHostname ? `https://${renderHostname}${path}` : "";
+}
+
+function normalizeWebhookSecret() {
+  const secret = optionalString("BOT_WEBHOOK_SECRET");
+  if (!secret) return "";
+
+  // Telegram accepts a narrow character set for secret_token; hash any
+  // platform-generated secret into a stable safe token.
+  return createHash("sha256").update(secret).digest("hex");
 }
 
 function parseBoolean(name, fallback = true) {
@@ -108,7 +118,7 @@ export const env = Object.freeze({
   BOT_POLLING: parseBoolean("BOT_POLLING", true),
   BOT_WEBHOOK_URL: resolveWebhookUrl(botWebhookPath),
   BOT_WEBHOOK_PATH: botWebhookPath,
-  BOT_WEBHOOK_SECRET: optionalString("BOT_WEBHOOK_SECRET"),
+  BOT_WEBHOOK_SECRET: normalizeWebhookSecret(),
   APP_TIME_ZONE: optionalString("APP_TIME_ZONE", "Asia/Tashkent"),
   MIN_PICKUP_LEAD_MINUTES: parsePositiveInteger("MIN_PICKUP_LEAD_MINUTES", 20),
   FIREBASE_SERVICE_ACCOUNT: parseServiceAccount(),
