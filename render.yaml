@@ -2,8 +2,10 @@ services:
   - type: web
     name: qoshiqcha-bot
     runtime: node
+    plan: free
+    rootDir: bot
     buildCommand: npm install
-    startCommand: node src/index.js
+    startCommand: npm start
     healthCheckPath: /
     envVars:
       - key: NODE_ENV
@@ -20,13 +22,9 @@ services:
         sync: false
       - key: CORS_ORIGIN
         sync: false
-      - key: PORT
-        value: "10000"
       - key: BOT_POLLING
         value: "false"
-      - key: BOT_WEBHOOK_URL
-        sync: false
       - key: BOT_WEBHOOK_PATH
         value: /telegram/webhook
       - key: BOT_WEBHOOK_SECRET
-        sync: false
+        generateValue: true
