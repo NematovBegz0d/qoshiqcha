@@ -96,6 +96,25 @@ app.get("/healthz", (_, res) =>
 
 // ─── Routes ────────────────────────────────────────────────────────────────
 
+app.get("/healthz/telegram", async (_, res) => {
+  try {
+    const [me, webhook] = await Promise.all([bot.telegram.getMe(), bot.telegram.getWebhookInfo()]);
+    res.json({
+      ok: true,
+      botUsername: me.username,
+      webhookUrl: webhook.url,
+      pendingUpdateCount: webhook.pending_update_count,
+      lastErrorDate: webhook.last_error_date ?? null,
+      lastErrorMessage: webhook.last_error_message ?? null,
+    });
+  } catch (err) {
+    res.status(502).json({
+      ok: false,
+      error: err instanceof Error ? err.message : "Telegram API check failed",
+    });
+  }
+});
+
 const deps = { db, admin, bot };
 
 app.use("/api/orders", createOrdersRouter(deps));
