@@ -33,6 +33,12 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ── branches ────────────────────────────────────────────────────────────
+    match /branches/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // ── promotions ──────────────────────────────────────────────────────────
     match /promotions/{id} {
       allow read: if true;

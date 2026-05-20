@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Clock, MapPin, Check } from "lucide-react";
-import { branches, generateTimeSlots } from "@/data/branches";
+import { generateTimeSlots } from "@/data/branches";
+import { useCatalog } from "@/store/catalogStore";
 import { useSettings } from "@/store/settingsStore";
 import { haptic, notify } from "@/lib/telegram";
 import { useT } from "@/lib/i18n";
@@ -13,14 +14,18 @@ export function PickupSheet({
   open: boolean;
   onOpenChange: (v: boolean) => void;
 }) {
+  const branches = useCatalog((s) => s.branches);
   const savedBranch = useSettings((s) => s.pickupBranchId);
   const savedTime = useSettings((s) => s.pickupTime);
   const setPickup = useSettings((s) => s.setPickup);
   const lang = useSettings((s) => s.lang);
   const tr = useT(lang);
 
-  const [branchId, setBranchId] = useState<string>(savedBranch ?? branches[0].id);
-  const branch = useMemo(() => branches.find((b) => b.id === branchId) ?? branches[0], [branchId]);
+  const [branchId, setBranchId] = useState<string>(savedBranch ?? branches[0]?.id ?? "");
+  const branch = useMemo(
+    () => branches.find((b) => b.id === branchId) ?? branches[0],
+    [branchId, branches],
+  );
   const slots = useMemo(() => generateTimeSlots(branch), [branch]);
   const [time, setTime] = useState<string>(savedTime ?? slots[0] ?? "");
 

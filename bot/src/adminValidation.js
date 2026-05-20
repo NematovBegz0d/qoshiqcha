@@ -331,6 +331,88 @@ export function cleanDocumentId(id, label) {
   return cleanId(id, label);
 }
 
+export function cleanBranchPayload(branch, { partial = false } = {}) {
+  if (!isPlainObject(branch)) throw new ValidationError("branch noto'g'ri");
+  assertAllowedKeys(
+    branch,
+    new Set(["id", "name", "address", "phone", "hours", "openFrom", "openTo", "lat", "lng"]),
+    "branch",
+  );
+
+  const cleaned = {};
+  if (!partial || "name" in branch) {
+    cleaned.name = cleanString(branch.name, "Filial nomi", { min: 1, max: 120 });
+  }
+  if (!partial || "address" in branch) {
+    cleaned.address = cleanString(branch.address, "Manzil", { min: 1, max: 300 });
+  }
+  if (!partial || "phone" in branch) {
+    cleaned.phone = cleanString(branch.phone, "Telefon", { min: 1, max: 30 });
+  }
+  if (!partial || "hours" in branch) {
+    cleaned.hours = cleanString(branch.hours, "Ish vaqti", { min: 1, max: 50 });
+  }
+  if (!partial || "openFrom" in branch) {
+    const from = cleanString(branch.openFrom ?? "09:00", "Ochilish vaqti", { min: 5, max: 5 });
+    if (!TIME_RE.test(from)) throw new ValidationError("Ochilish vaqti HH:mm bo'lishi kerak");
+    cleaned.openFrom = from;
+  }
+  if (!partial || "openTo" in branch) {
+    const to = cleanString(branch.openTo ?? "23:00", "Yopilish vaqti", { min: 5, max: 5 });
+    if (!TIME_RE.test(to)) throw new ValidationError("Yopilish vaqti HH:mm bo'lishi kerak");
+    cleaned.openTo = to;
+  }
+  if (!partial || "lat" in branch) {
+    cleaned.lat = cleanNumber(branch.lat ?? 0, "Kenglik (lat)", { min: -90, max: 90 });
+  }
+  if (!partial || "lng" in branch) {
+    cleaned.lng = cleanNumber(branch.lng ?? 0, "Uzunlik (lng)", { min: -180, max: 180 });
+  }
+
+  if (Object.keys(cleaned).length === 0) throw new ValidationError("Saqlanadigan maydon yo'q");
+  return cleaned;
+}
+
+export function cleanContactsPatch(patch) {
+  if (!isPlainObject(patch)) throw new ValidationError("contacts patch noto'g'ri");
+  assertAllowedKeys(patch, new Set(["contacts", "socials", "workingHours"]), "contacts");
+
+  const cleaned = {};
+
+  if ("contacts" in patch) {
+    if (!Array.isArray(patch.contacts)) throw new ValidationError("contacts ro'yxat bo'lishi kerak");
+    if (patch.contacts.length > 10) throw new ValidationError("contacts 10 tadan oshmasin");
+    cleaned.contacts = patch.contacts.map((c, i) => {
+      if (!isPlainObject(c)) throw new ValidationError(`Kontakt #${i + 1} noto'g'ri`);
+      return {
+        label: cleanString(c.label, `Kontakt #${i + 1} nomi`, { min: 1, max: 60 }),
+        value: cleanString(c.value, `Kontakt #${i + 1} qiymati`, { min: 1, max: 100 }),
+        href: cleanString(c.href, `Kontakt #${i + 1} havolasi`, { min: 1, max: 300 }),
+      };
+    });
+  }
+
+  if ("socials" in patch) {
+    if (!Array.isArray(patch.socials)) throw new ValidationError("socials ro'yxat bo'lishi kerak");
+    if (patch.socials.length > 10) throw new ValidationError("socials 10 tadan oshmasin");
+    cleaned.socials = patch.socials.map((s, i) => {
+      if (!isPlainObject(s)) throw new ValidationError(`Ijtimoiy #${i + 1} noto'g'ri`);
+      return {
+        label: cleanString(s.label, `Ijtimoiy #${i + 1} nomi`, { min: 1, max: 60 }),
+        href: cleanString(s.href, `Ijtimoiy #${i + 1} havolasi`, { min: 1, max: 300 }),
+        color: cleanString(s.color, `Ijtimoiy #${i + 1} rangi`, { min: 1, max: 120 }),
+      };
+    });
+  }
+
+  if ("workingHours" in patch) {
+    cleaned.workingHours = cleanString(patch.workingHours, "Ish vaqti matni", { min: 1, max: 100 });
+  }
+
+  if (Object.keys(cleaned).length === 0) throw new ValidationError("Saqlanadigan maydon yo'q");
+  return cleaned;
+}
+
 export function cleanPromotionPayload(promotion, { partial = false } = {}) {
   if (!isPlainObject(promotion)) throw new ValidationError("promotion noto'g'ri");
   assertAllowedKeys(

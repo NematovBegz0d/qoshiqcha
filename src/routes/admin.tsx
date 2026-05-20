@@ -8,6 +8,8 @@ import {
   Settings as SettingsIcon,
   Lock,
   Megaphone,
+  MapPin,
+  Phone,
 } from "lucide-react";
 import { haptic, getTelegramUser } from "@/lib/telegram";
 import { OrdersTab } from "@/components/admin/OrdersTab";
@@ -15,6 +17,8 @@ import { ProductsTab } from "@/components/admin/ProductsTab";
 import { CategoriesTab } from "@/components/admin/CategoriesTab";
 import { SettingsTab } from "@/components/admin/SettingsTab";
 import { PromotionsTab } from "@/components/admin/PromotionsTab";
+import { BranchesTab } from "@/components/admin/BranchesTab";
+import { ContactsTab } from "@/components/admin/ContactsTab";
 
 // UI-only guard. Real security is enforced in bot callbacks (ADMIN_TELEGRAM_IDS env on server).
 const ADMIN_IDS: Set<number> = new Set(
@@ -28,7 +32,7 @@ export const Route = createFileRoute("/admin")({
   component: AdminPage,
 });
 
-type Tab = "orders" | "products" | "categories" | "promotions" | "settings";
+type Tab = "orders" | "products" | "categories" | "promotions" | "branches" | "contacts" | "settings";
 
 function AdminPage() {
   const [tab, setTab] = useState<Tab>("orders");
@@ -83,6 +87,18 @@ function AdminPage() {
               onClick={() => setTab("promotions")}
             />
             <TabBtn
+              icon={<MapPin className="w-3.5 h-3.5" />}
+              label="Filiallar"
+              active={tab === "branches"}
+              onClick={() => setTab("branches")}
+            />
+            <TabBtn
+              icon={<Phone className="w-3.5 h-3.5" />}
+              label="Kontaktlar"
+              active={tab === "contacts"}
+              onClick={() => setTab("contacts")}
+            />
+            <TabBtn
               icon={<SettingsIcon className="w-3.5 h-3.5" />}
               label="Sozlamalar"
               active={tab === "settings"}
@@ -97,6 +113,8 @@ function AdminPage() {
         {tab === "products" && <ProductsTab />}
         {tab === "categories" && <CategoriesTab />}
         {tab === "promotions" && <PromotionsTab />}
+        {tab === "branches" && <BranchesTab />}
+        {tab === "contacts" && <ContactsTab />}
         {tab === "settings" && <SettingsTab />}
       </main>
     </div>

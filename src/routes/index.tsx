@@ -18,7 +18,6 @@ import { DeliveryMapSheet } from "@/components/DeliveryMapSheet";
 import { EmptyState } from "@/components/EmptyState";
 import { useCatalog } from "@/store/catalogStore";
 import { usePromotions } from "@/store/promotionsStore";
-import { branches } from "@/data/branches";
 import { formatUZS, isPromoExpired } from "@/lib/format";
 import { useSettings } from "@/store/settingsStore";
 import { useUser } from "@/store/userStore";
@@ -68,6 +67,7 @@ function HomePage() {
   const catalogError = useCatalog((s) => s.catalogError);
   const loadFromFirestore = useCatalog((s) => s.loadFromFirestore);
   const settings = useCatalog((s) => s.shopSettings);
+  const branches = useCatalog((s) => s.branches);
   const mode = useSettings((s) => s.mode);
   const setMode = useSettings((s) => s.setMode);
   const pickupBranchId = useSettings((s) => s.pickupBranchId);

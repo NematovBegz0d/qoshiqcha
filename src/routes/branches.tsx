@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ChevronLeft, MapPin, Phone, Clock, Navigation } from "lucide-react";
 import { haptic } from "@/lib/telegram";
-import { branches } from "@/data/branches";
+import { useCatalog } from "@/store/catalogStore";
 import { useSettings } from "@/store/settingsStore";
 import { useT } from "@/lib/i18n";
 
@@ -13,6 +13,7 @@ function BranchesPage() {
   const navigate = useNavigate();
   const lang = useSettings((s) => s.lang);
   const tr = useT(lang);
+  const branches = useCatalog((s) => s.branches);
 
   return (
     <div className="app-shell pb-12">

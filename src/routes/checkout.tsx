@@ -8,7 +8,6 @@ import { useSettings } from "@/store/settingsStore";
 import { formatUZS } from "@/lib/format";
 import { haptic, notify, tg } from "@/lib/telegram";
 import { submitOrderToBackend, saveOrderLocally } from "@/services/orderService";
-import { branches } from "@/data/branches";
 import { EmptyState } from "@/components/EmptyState";
 import { useT } from "@/lib/i18n";
 
@@ -26,6 +25,7 @@ function CheckoutPage() {
   const addresses = useUser((s) => s.addresses);
   const defaultAddressId = useUser((s) => s.defaultAddressId);
   const settings = useCatalog((s) => s.shopSettings);
+  const branches = useCatalog((s) => s.branches);
   const currentMode = useSettings((s) => s.mode);
   const pickupBranchId = useSettings((s) => s.pickupBranchId);
   const pickupTime = useSettings((s) => s.pickupTime);

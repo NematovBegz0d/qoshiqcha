@@ -1,5 +1,5 @@
 import { tg } from "@/lib/telegram";
-import type { Category, OrderStatus, Product, Promotion, Settings } from "@/lib/types";
+import type { Branch, BusinessContacts, Category, OrderStatus, Product, Promotion, Settings } from "@/lib/types";
 
 const BASE = (
   (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:3005"
@@ -56,4 +56,14 @@ export const adminApi = {
     call("PATCH", `/api/admin/promotions/${id}`, { patch }),
 
   deletePromotion: (id: string) => call("DELETE", `/api/admin/promotions/${id}`),
+
+  createBranch: (branch: Branch) => call("POST", "/api/admin/branches", { branch }),
+
+  updateBranch: (id: string, patch: Partial<Branch>) =>
+    call("PATCH", `/api/admin/branches/${id}`, { patch }),
+
+  deleteBranch: (id: string) => call("DELETE", `/api/admin/branches/${id}`),
+
+  updateContacts: (patch: Partial<BusinessContacts>) =>
+    call("PATCH", "/api/admin/contacts", { patch }),
 };

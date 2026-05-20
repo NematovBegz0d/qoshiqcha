@@ -8,6 +8,8 @@ import { createAdminProductsRouter } from "./routes/adminProducts.js";
 import { createAdminCategoriesRouter } from "./routes/adminCategories.js";
 import { createAdminPromotionsRouter } from "./routes/adminPromotions.js";
 import { createAdminSettingsRouter } from "./routes/adminSettings.js";
+import { createAdminBranchesRouter } from "./routes/adminBranches.js";
+import { createAdminContactsRouter } from "./routes/adminContacts.js";
 import { createReviewsRouter } from "./routes/reviews.js";
 import { createNotificationsRouter } from "./routes/notifications.js";
 import { createRateLimit } from "./middleware/rateLimit.js";
@@ -154,6 +156,8 @@ app.use("/api/admin/products", createAdminProductsRouter(deps));
 app.use("/api/admin/categories", createAdminCategoriesRouter(deps));
 app.use("/api/admin/promotions", createAdminPromotionsRouter(deps));
 app.use("/api/admin/settings", createAdminSettingsRouter(deps));
+app.use("/api/admin/branches", createAdminBranchesRouter(deps));
+app.use("/api/admin/contacts", createAdminContactsRouter(deps));
 app.use("/api/reviews", createReviewsRouter(deps));
 app.use("/api/notifications", createNotificationsRouter(deps));
 

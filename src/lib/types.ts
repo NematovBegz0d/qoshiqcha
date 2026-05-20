@@ -114,6 +114,36 @@ export type Settings = {
   adminChatId?: string;
 };
 
+export type Branch = {
+  id: string;
+  name: string;
+  address: string;
+  phone: string;
+  hours: string;
+  openFrom: string;
+  openTo: string;
+  lat: number;
+  lng: number;
+};
+
+export type ContactItem = {
+  label: string;
+  value: string;
+  href: string;
+};
+
+export type SocialItem = {
+  label: string;
+  href: string;
+  color: string;
+};
+
+export type BusinessContacts = {
+  contacts: ContactItem[];
+  socials: SocialItem[];
+  workingHours: string;
+};
+
 export type NotifItem = {
   id: string;
   type: string;

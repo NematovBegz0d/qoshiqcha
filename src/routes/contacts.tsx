@@ -1,7 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ChevronLeft } from "lucide-react";
 import { haptic } from "@/lib/telegram";
-import { businessContacts, businessSocials, businessWorkingHours } from "@/data/businessInfo";
+import { useCatalog } from "@/store/catalogStore";
+import { getContactIcon, getSocialIcon } from "@/data/businessInfo";
 import { useSettings } from "@/store/settingsStore";
 import { useT } from "@/lib/i18n";
 
@@ -9,13 +10,11 @@ export const Route = createFileRoute("/contacts")({
   component: ContactsPage,
 });
 
-const contacts = businessContacts;
-const socials = businessSocials;
-
 function ContactsPage() {
   const navigate = useNavigate();
   const lang = useSettings((s) => s.lang);
   const tr = useT(lang);
+  const { contacts, socials, workingHours } = useCatalog((s) => s.businessContacts);
 
   return (
     <div className="app-shell pb-12">
@@ -35,7 +34,7 @@ function ContactsPage() {
       <main className="px-4 pt-2 space-y-4">
         <div className="rounded-2xl bg-card border border-border overflow-hidden divide-y divide-border">
           {contacts.map((c) => {
-            const Icon = c.icon;
+            const Icon = getContactIcon(c.href);
             return (
               <a
                 key={c.label}
@@ -59,7 +58,7 @@ function ContactsPage() {
           <p className="text-xs text-muted-foreground mb-2 px-1">{tr("socialNetworks")}</p>
           <div className="grid grid-cols-3 gap-2">
             {socials.map((s) => {
-              const Icon = s.icon;
+              const Icon = getSocialIcon(s.label);
               return (
                 <a
                   key={s.label}
@@ -69,9 +68,7 @@ function ContactsPage() {
                   onClick={() => haptic("light")}
                   className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-card border border-border active:scale-95"
                 >
-                  <div
-                    className={`grid place-items-center w-11 h-11 rounded-2xl text-white ${s.color}`}
-                  >
+                  <div className={`grid place-items-center w-11 h-11 rounded-2xl text-white ${s.color}`}>
                     <Icon className="w-5 h-5" />
                   </div>
                   <span className="text-xs font-medium">{s.label}</span>
@@ -83,7 +80,7 @@ function ContactsPage() {
 
         <div className="p-4 rounded-2xl bg-gradient-primary text-primary-foreground shadow-soft">
           <h3 className="font-bold">{tr("workingTime")}</h3>
-          <p className="text-sm opacity-90 mt-1">{businessWorkingHours}</p>
+          <p className="text-sm opacity-90 mt-1">{workingHours}</p>
         </div>
       </main>
     </div>

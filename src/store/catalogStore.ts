@@ -1,8 +1,9 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { collection, getDocs, doc, getDoc } from "firebase/firestore";
-import type { Category, Product, Settings } from "@/lib/types";
+import type { Branch, BusinessContacts, Category, Product, Settings } from "@/lib/types";
 import { settings as mockSettings } from "@/data/mockData";
+import { defaultBranches, defaultBusinessContacts } from "@/data/businessInfo";
 import { db } from "@/services/firebase";
 import { adminApi } from "@/services/adminApi";
 
@@ -10,6 +11,8 @@ type CatalogState = {
   products: Product[];
   categories: Category[];
   shopSettings: Settings;
+  branches: Branch[];
+  businessContacts: BusinessContacts;
   catalogLoading: boolean;
   catalogError: string | null;
   loadFromFirestore: () => Promise<void>;
@@ -21,6 +24,10 @@ type CatalogState = {
   updateCategory: (id: string, patch: Partial<Category>) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
   updateShopSettings: (patch: Partial<Settings>) => Promise<void>;
+  addBranch: (b: Branch) => Promise<void>;
+  updateBranch: (id: string, patch: Partial<Branch>) => Promise<void>;
+  deleteBranch: (id: string) => Promise<void>;
+  updateBusinessContacts: (patch: Partial<BusinessContacts>) => Promise<void>;
   resetCatalog: () => void;
 };
 
@@ -30,16 +37,20 @@ export const useCatalog = create<CatalogState>()(
       products: [],
       categories: [],
       shopSettings: mockSettings,
+      branches: defaultBranches,
+      businessContacts: defaultBusinessContacts,
       catalogLoading: false,
       catalogError: null,
 
       loadFromFirestore: async () => {
         set({ catalogLoading: true, catalogError: null });
         try {
-          const [catSnap, prodSnap, settingsSnap] = await Promise.all([
+          const [catSnap, prodSnap, settingsSnap, branchSnap, contactsSnap] = await Promise.all([
             getDocs(collection(db, "categories")),
             getDocs(collection(db, "products")),
             getDoc(doc(db, "settings", "global")),
+            getDocs(collection(db, "branches")),
+            getDoc(doc(db, "settings", "contacts")),
           ]);
 
           const categories = catSnap.docs
@@ -49,8 +60,14 @@ export const useCatalog = create<CatalogState>()(
           const shopSettings = settingsSnap.exists()
             ? ({ ...mockSettings, ...settingsSnap.data() } as Settings)
             : mockSettings;
+          const branches = branchSnap.docs.length
+            ? branchSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as Branch)
+            : defaultBranches;
+          const businessContacts = contactsSnap.exists()
+            ? ({ ...defaultBusinessContacts, ...contactsSnap.data() } as BusinessContacts)
+            : defaultBusinessContacts;
 
-          set({ categories, products, shopSettings, catalogError: null });
+          set({ categories, products, shopSettings, branches, businessContacts, catalogError: null });
         } catch (err) {
           console.error("[catalogStore] Firestore yuklanmadi:", err);
           set({ catalogError: "Katalog yuklanmadi. Internet aloqasini tekshiring." });
@@ -101,19 +118,49 @@ export const useCatalog = create<CatalogState>()(
         await adminApi.updateSettings(patch);
         set((s) => ({ shopSettings: { ...s.shopSettings, ...patch } }));
       },
+
+      addBranch: async (b) => {
+        await adminApi.createBranch(b);
+        set((s) => ({ branches: [...s.branches, b] }));
+      },
+      updateBranch: async (id, patch) => {
+        await adminApi.updateBranch(id, patch);
+        set((s) => ({
+          branches: s.branches.map((b) => (b.id === id ? { ...b, ...patch } : b)),
+        }));
+      },
+      deleteBranch: async (id) => {
+        await adminApi.deleteBranch(id);
+        set((s) => ({ branches: s.branches.filter((b) => b.id !== id) }));
+      },
+      updateBusinessContacts: async (patch) => {
+        await adminApi.updateContacts(patch);
+        set((s) => ({ businessContacts: { ...s.businessContacts, ...patch } }));
+      },
+
       resetCatalog: () =>
-        set({ products: [], categories: [], shopSettings: mockSettings, catalogError: null }),
+        set({
+          products: [],
+          categories: [],
+          shopSettings: mockSettings,
+          branches: defaultBranches,
+          businessContacts: defaultBusinessContacts,
+          catalogError: null,
+        }),
     }),
     {
       name: "qoshiqcha-catalog",
-      version: 2,
+      version: 3,
       migrate: (persisted, version) => {
-        // v1 had mock data baked into initial state; clear it so Firestore data loads fresh
         const base = persisted as Partial<CatalogState>;
         if (version < 2) {
           base.products = [];
           base.categories = [];
           base.catalogError = null;
+        }
+        if (version < 3) {
+          base.branches = defaultBranches;
+          base.businessContacts = defaultBusinessContacts;
         }
         return base as unknown as CatalogState;
       },
