@@ -23,4 +23,10 @@ services:
       - key: PORT
         value: "3005"
       - key: BOT_POLLING
-        value: "true"
+        value: "false"
+      - key: BOT_WEBHOOK_URL
+        sync: false
+      - key: BOT_WEBHOOK_PATH
+        value: /telegram/webhook
+      - key: BOT_WEBHOOK_SECRET
+        sync: false

@@ -74,6 +74,17 @@ npm start
 
 **Render** / **Railway** / **VPS** — har qanday Node host. Build: `npm install` · Start: `npm start`. WebSocket kerak emas.
 
+0 budjetli hostlarda, masalan Render Free, service uxlab qolishi mumkin. Bunday joyda polling o'rniga webhook ishlating:
+
+```
+BOT_POLLING=false
+BOT_WEBHOOK_URL=https://your-backend.onrender.com/telegram/webhook
+BOT_WEBHOOK_PATH=/telegram/webhook
+BOT_WEBHOOK_SECRET=long_random_string
+```
+
+`BOT_WEBHOOK_SECRET` ixtiyoriy, lekin production uchun tavsiya qilinadi.
+
 ---
 
 ## 3. Firestore tuzilishi

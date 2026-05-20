@@ -68,6 +68,15 @@ app.use(
     },
   }),
 );
+
+if (!env.BOT_POLLING && env.BOT_WEBHOOK_URL) {
+  app.use(
+    bot.webhookCallback(env.BOT_WEBHOOK_PATH, {
+      secretToken: env.BOT_WEBHOOK_SECRET || undefined,
+    }),
+  );
+}
+
 app.use(express.json({ limit: "1mb" }));
 app.use("/api", createRateLimit({ windowMs: 60_000, max: 180, name: "api" }));
 
@@ -95,6 +104,18 @@ if (env.BOT_POLLING) {
   bot.launch().then(() => console.log("Bot started"));
   process.once("SIGINT", () => bot.stop("SIGINT"));
   process.once("SIGTERM", () => bot.stop("SIGTERM"));
+} else if (env.BOT_WEBHOOK_URL) {
+  const webhookOptions = env.BOT_WEBHOOK_SECRET
+    ? { secret_token: env.BOT_WEBHOOK_SECRET }
+    : undefined;
+
+  bot.telegram
+    .setWebhook(env.BOT_WEBHOOK_URL, webhookOptions)
+    .then(() => console.log(`Bot webhook set: ${env.BOT_WEBHOOK_URL}`))
+    .catch((err) => {
+      console.error("Bot webhook setup failed:", err);
+      process.exitCode = 1;
+    });
 } else {
-  console.log("Bot polling disabled");
+  console.log("Bot polling and webhook disabled");
 }

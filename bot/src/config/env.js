@@ -17,6 +17,12 @@ function optionalString(name, fallback = "") {
   return cleanString(process.env[name]) || fallback;
 }
 
+function normalizePath(value, fallback) {
+  const raw = cleanString(value) || fallback;
+  if (!raw) return "";
+  return raw.startsWith("/") ? raw : `/${raw}`;
+}
+
 function parseBoolean(name, fallback = true) {
   const value = cleanString(process.env[name]).toLowerCase();
   if (!value) return fallback;
@@ -88,6 +94,9 @@ export const env = Object.freeze({
   ADMIN_CHAT_ID: optionalString("ADMIN_CHAT_ID"),
   ADMIN_TELEGRAM_IDS: parseTelegramIds("ADMIN_TELEGRAM_IDS"),
   BOT_POLLING: parseBoolean("BOT_POLLING", true),
+  BOT_WEBHOOK_URL: optionalString("BOT_WEBHOOK_URL"),
+  BOT_WEBHOOK_PATH: normalizePath(process.env.BOT_WEBHOOK_PATH, "/telegram/webhook"),
+  BOT_WEBHOOK_SECRET: optionalString("BOT_WEBHOOK_SECRET"),
   APP_TIME_ZONE: optionalString("APP_TIME_ZONE", "Asia/Tashkent"),
   MIN_PICKUP_LEAD_MINUTES: parsePositiveInteger("MIN_PICKUP_LEAD_MINUTES", 20),
   FIREBASE_SERVICE_ACCOUNT: parseServiceAccount(),
