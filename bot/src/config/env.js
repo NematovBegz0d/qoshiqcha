@@ -28,7 +28,10 @@ function resolveWebhookUrl(path) {
   if (explicitUrl) return explicitUrl;
 
   const renderUrl = optionalString("RENDER_EXTERNAL_URL").replace(/\/$/, "");
-  return renderUrl ? `${renderUrl}${path}` : "";
+  if (renderUrl) return `${renderUrl}${path}`;
+
+  const renderHostname = optionalString("RENDER_EXTERNAL_HOSTNAME");
+  return renderHostname ? `https://${renderHostname}${path}` : "";
 }
 
 function parseBoolean(name, fallback = true) {

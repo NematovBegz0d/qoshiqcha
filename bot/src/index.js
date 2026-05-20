@@ -81,6 +81,18 @@ app.use(express.json({ limit: "1mb" }));
 app.use("/api", createRateLimit({ windowMs: 60_000, max: 180, name: "api" }));
 
 app.get("/", (_, res) => res.json({ ok: true, name: "Qoshiqcha fast food-bot" }));
+app.get("/healthz", (_, res) =>
+  res.json({
+    ok: true,
+    botPolling: env.BOT_POLLING,
+    webhookPath: env.BOT_WEBHOOK_PATH,
+    webhookUrlConfigured: Boolean(env.BOT_WEBHOOK_URL),
+    webhookSecretConfigured: Boolean(env.BOT_WEBHOOK_SECRET),
+    renderExternalUrlConfigured: Boolean(process.env.RENDER_EXTERNAL_URL),
+    renderExternalHostnameConfigured: Boolean(process.env.RENDER_EXTERNAL_HOSTNAME),
+    renderGitCommit: process.env.RENDER_GIT_COMMIT ?? null,
+  }),
+);
 
 // ─── Routes ────────────────────────────────────────────────────────────────
 
