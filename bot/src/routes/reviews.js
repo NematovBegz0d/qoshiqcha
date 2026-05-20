@@ -43,13 +43,13 @@ function cleanReviewText(text) {
   return safeText;
 }
 
-async function assertUserCanReviewProduct(transaction, db, telegramId, productId) {
-  const eligibleOrdersQuery = db
+async function assertUserCanReviewProduct(db, telegramId, productId) {
+  const ordersSnap = await db
     .collection("orders")
     .where("telegramId", "==", telegramId)
-    .limit(100);
+    .limit(100)
+    .get();
 
-  const ordersSnap = await transaction.get(eligibleOrdersQuery);
   const hasCompletedOrderForProduct = ordersSnap.docs.some((doc) => {
     const order = doc.data();
     const items = order.items;
@@ -82,6 +82,9 @@ export function createReviewsRouter({ db, admin }) {
         const authorId = req.tgUser.id;
         const reviewId = `${safeProductId}_${authorId}`;
 
+        // Transaction tashqarisida tekshirish — transaction.get(Query) ishlamaydi Admin SDK da
+        await assertUserCanReviewProduct(db, authorId, safeProductId);
+
         await db.runTransaction(async (t) => {
           const productRef = db.collection("products").doc(safeProductId);
           const reviewRef = db.collection("reviews").doc(reviewId);
@@ -103,8 +106,6 @@ export function createReviewsRouter({ db, admin }) {
           if (existingReviewSnap.exists) {
             throw validationError("Siz bu mahsulotga avval sharh qoldirgansiz.");
           }
-
-          await assertUserCanReviewProduct(t, db, authorId, safeProductId);
 
           const oldCount = Number.isInteger(data.reviewsCount) ? data.reviewsCount : 0;
           const oldRating = typeof data.rating === "number" ? data.rating : 0;

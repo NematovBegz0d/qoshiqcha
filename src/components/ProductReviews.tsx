@@ -115,15 +115,13 @@ export function ProductReviews({
       haptic("medium");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "";
-      const isNoTelegram = msg.includes("Telegram ichida oching");
       setSubmitError(
-        isNoTelegram
-          ? msg
-          : lang === "ru"
+        msg ||
+          (lang === "ru"
             ? "Не удалось отправить отзыв. Попробуйте позже."
             : lang === "en"
               ? "Failed to submit review. Try again later."
-              : "Sharh yuborilmadi. Keyinroq urinib ko'ring.",
+              : "Sharh yuborilmadi. Keyinroq urinib ko'ring."),
       );
     } finally {
       setSubmitting(false);
