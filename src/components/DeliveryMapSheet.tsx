@@ -204,12 +204,8 @@ export function DeliveryMapSheet({
 
       const map = new ym.Map(
         mapDivRef.current,
-        { center: [c.lat, c.lng], zoom: 14 },
-        {
-          suppressMapOpenBlock: true,
-          yandexMapDisablePoiInteractivity: true,
-          controls: [], // Yandex ning o'z search/zoom bar larini o'chirish
-        },
+        { center: [c.lat, c.lng], zoom: 14, controls: [] }, // controls — state ichida bo'lishi kerak
+        { suppressMapOpenBlock: true, yandexMapDisablePoiInteractivity: true },
       );
 
       const mark = new ym.Placemark(
