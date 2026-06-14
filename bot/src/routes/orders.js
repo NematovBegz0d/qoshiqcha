@@ -66,13 +66,13 @@ function cleanAddress(address) {
   };
 }
 
-function cleanPickup(pickup) {
+async function cleanPickup(pickup) {
   if (!pickup || typeof pickup !== "object" || Array.isArray(pickup)) {
     throw new ValidationError("Olib ketish uchun filial va vaqt kiritilmagan");
   }
 
   const branchId = cleanText(pickup.branchId, "Filial ID", { min: 1, max: 80 });
-  const branch = getBranchById(branchId);
+  const branch = await getBranchById(branchId);
   if (!branch) {
     throw new ValidationError("Tanlangan filial topilmadi");
   }
@@ -106,6 +106,18 @@ function cleanPickup(pickup) {
   };
 }
 
+// Idempotentlik kaliti: frontend har checkout uchun barqaror UUID yuboradi.
+// Bir xil kalit bilan kelgan takroriy so'rov yangi buyurtma yaratmaydi.
+const CLIENT_ORDER_ID_RE = /^[A-Za-z0-9_-]{8,64}$/;
+
+function cleanClientOrderId(value) {
+  if (value === undefined || value === null || value === "") return null;
+  if (typeof value !== "string" || !CLIENT_ORDER_ID_RE.test(value.trim())) {
+    throw new ValidationError("Buyurtma identifikatori noto'g'ri formatda");
+  }
+  return value.trim();
+}
+
 export function createOrdersRouter({ db, admin, bot }) {
   const router = express.Router();
 
@@ -115,9 +127,11 @@ export function createOrdersRouter({ db, admin, bot }) {
       const snap = await db
         .collection("orders")
         .where("telegramId", "==", req.tgUser.id)
+        .orderBy("createdAt", "desc")
         .limit(100)
         .get();
 
+      // orderBy eng yangi 100 tani kafolatlaydi; sort serialize'dan keyin xavfsizlik uchun.
       const orders = snap.docs.map(serializeOrderDoc).sort(sortOrdersNewestFirst);
       return res.json({ ok: true, orders });
     } catch (err) {
@@ -146,7 +160,9 @@ export function createOrdersRouter({ db, admin, bot }) {
         return res.status(400).json({ error: "Order ma'lumoti noto'g'ri" });
       }
 
-      const settings = await getSettings();
+      const clientOrderId = cleanClientOrderId(order.clientOrderId);
+
+      const settings = await getSettings(db);
 
       if (!settings.shopIsOpen) {
         return res.status(400).json({ error: "Do'kon hozir yopiq" });
@@ -174,9 +190,9 @@ export function createOrdersRouter({ db, admin, bot }) {
       }
 
       const safeAddress = orderType === "delivery" ? cleanAddress(order.address) : null;
-      const safePickup = orderType === "pickup" ? cleanPickup(order.pickup) : null;
+      const safePickup = orderType === "pickup" ? await cleanPickup(order.pickup) : null;
 
-      const { recalculatedItems, itemsTotal } = await recalculateCart(order.items);
+      const { recalculatedItems, itemsTotal } = await recalculateCart(db, order.items);
 
       if (itemsTotal < settings.minOrderPrice) {
         return res.status(400).json({
@@ -189,6 +205,7 @@ export function createOrdersRouter({ db, admin, bot }) {
 
       const orderDoc = {
         orderNumber: generateOrderNumber(),
+        clientOrderId: clientOrderId ?? null,
         telegramId: tgUser.id,
         user: {
           telegramId: tgUser.id,
@@ -213,7 +230,34 @@ export function createOrdersRouter({ db, admin, bot }) {
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       };
 
-      const ref = await db.collection("orders").add(orderDoc);
+      // ── Idempotent yozish ────────────────────────────────────────────────
+      // clientOrderId bo'lsa, doc id deterministik (`{telegramId}_{clientOrderId}`)
+      // va `.create()` atomik — bir xil kalitli takroriy so'rov ALREADY_EXISTS
+      // beradi, biz mavjud buyurtmani qaytaramiz (yangi buyurtma yaratilmaydi).
+      let ref;
+      if (clientOrderId) {
+        ref = db.collection("orders").doc(`${tgUser.id}_${clientOrderId}`);
+        try {
+          await ref.create(orderDoc);
+        } catch (err) {
+          // gRPC ALREADY_EXISTS = 6
+          if (err?.code === 6) {
+            const existingSnap = await ref.get();
+            const existingOrder = serializeOrderDoc(existingSnap);
+            return res.status(200).json({
+              ok: true,
+              id: ref.id,
+              orderNumber: existingOrder.orderNumber,
+              order: existingOrder,
+              duplicate: true,
+            });
+          }
+          throw err;
+        }
+      } else {
+        ref = await db.collection("orders").add(orderDoc);
+      }
+
       const savedSnap = await ref.get();
       const savedOrder = serializeOrderDoc(savedSnap);
 

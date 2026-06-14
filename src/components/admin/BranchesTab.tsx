@@ -130,7 +130,9 @@ export function BranchesTab() {
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-sm">{b.name}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">{b.address}</p>
-                  <p className="text-xs text-muted-foreground">{b.phone} · {b.hours}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {b.phone} · {b.hours}
+                  </p>
                 </div>
               </div>
               <div className="flex gap-2 mt-3">
@@ -210,10 +212,20 @@ function BranchForm({
       </Field>
       <div className="grid grid-cols-2 gap-2">
         <Field label="Ochilish">
-          <input type="time" value={form.openFrom} onChange={(e) => set("openFrom", e.target.value)} className="form-input" />
+          <input
+            type="time"
+            value={form.openFrom}
+            onChange={(e) => set("openFrom", e.target.value)}
+            className="form-input"
+          />
         </Field>
         <Field label="Yopilish">
-          <input type="time" value={form.openTo} onChange={(e) => set("openTo", e.target.value)} className="form-input" />
+          <input
+            type="time"
+            value={form.openTo}
+            onChange={(e) => set("openTo", e.target.value)}
+            className="form-input"
+          />
         </Field>
       </div>
       <div className="grid grid-cols-2 gap-2">

@@ -18,11 +18,9 @@ export function ContactsTab() {
   const updateContact = (i: number, patch: Partial<ContactItem>) =>
     setContacts((prev) => prev.map((c, idx) => (idx === i ? { ...c, ...patch } : c)));
 
-  const addContact = () =>
-    setContacts((prev) => [...prev, { label: "", value: "", href: "" }]);
+  const addContact = () => setContacts((prev) => [...prev, { label: "", value: "", href: "" }]);
 
-  const removeContact = (i: number) =>
-    setContacts((prev) => prev.filter((_, idx) => idx !== i));
+  const removeContact = (i: number) => setContacts((prev) => prev.filter((_, idx) => idx !== i));
 
   const updateSocial = (i: number, patch: Partial<SocialItem>) =>
     setSocials((prev) => prev.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
@@ -30,8 +28,7 @@ export function ContactsTab() {
   const addSocial = () =>
     setSocials((prev) => [...prev, { label: "", href: "", color: "bg-sky-500" }]);
 
-  const removeSocial = (i: number) =>
-    setSocials((prev) => prev.filter((_, idx) => idx !== i));
+  const removeSocial = (i: number) => setSocials((prev) => prev.filter((_, idx) => idx !== i));
 
   const save = async () => {
     setSaving(true);

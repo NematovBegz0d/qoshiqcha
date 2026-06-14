@@ -32,7 +32,14 @@ export const Route = createFileRoute("/admin")({
   component: AdminPage,
 });
 
-type Tab = "orders" | "products" | "categories" | "promotions" | "branches" | "contacts" | "settings";
+type Tab =
+  | "orders"
+  | "products"
+  | "categories"
+  | "promotions"
+  | "branches"
+  | "contacts"
+  | "settings";
 
 function AdminPage() {
   const [tab, setTab] = useState<Tab>("orders");

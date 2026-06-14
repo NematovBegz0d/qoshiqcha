@@ -68,7 +68,9 @@ function ContactsPage() {
                   onClick={() => haptic("light")}
                   className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-card border border-border active:scale-95"
                 >
-                  <div className={`grid place-items-center w-11 h-11 rounded-2xl text-white ${s.color}`}>
+                  <div
+                    className={`grid place-items-center w-11 h-11 rounded-2xl text-white ${s.color}`}
+                  >
                     <Icon className="w-5 h-5" />
                   </div>
                   <span className="text-xs font-medium">{s.label}</span>

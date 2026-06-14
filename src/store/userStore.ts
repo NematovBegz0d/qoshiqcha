@@ -76,7 +76,9 @@ export const useUser = create<UserState>()(
           defaultAddressId: id,
           addresses: s.addresses.map((a) => ({ ...a, isDefault: a.id === id })),
         })),
-      addOrder: (o) => set((s) => ({ orders: [o, ...s.orders] })),
+      // Lokal orders faqat order-success ekrani uchun optimistik kesh —
+      // haqiqiy tarix backenddan (useMyOrders). localStorage shishmasligi uchun 50 ta bilan cheklaymiz.
+      addOrder: (o) => set((s) => ({ orders: [o, ...s.orders].slice(0, 50) })),
       updateOrderStatus: (id, status) =>
         set((s) => ({
           orders: s.orders.map((o) =>

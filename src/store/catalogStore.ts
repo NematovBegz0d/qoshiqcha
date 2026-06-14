@@ -67,7 +67,14 @@ export const useCatalog = create<CatalogState>()(
             ? ({ ...defaultBusinessContacts, ...contactsSnap.data() } as BusinessContacts)
             : defaultBusinessContacts;
 
-          set({ categories, products, shopSettings, branches, businessContacts, catalogError: null });
+          set({
+            categories,
+            products,
+            shopSettings,
+            branches,
+            businessContacts,
+            catalogError: null,
+          });
         } catch (err) {
           console.error("[catalogStore] Firestore yuklanmadi:", err);
           set({ catalogError: "Katalog yuklanmadi. Internet aloqasini tekshiring." });

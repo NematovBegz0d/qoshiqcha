@@ -28,16 +28,12 @@ VITE_FIREBASE_MESSAGING_SENDER_ID=...
 VITE_FIREBASE_APP_ID=...
 ```
 
-4. Firebase paketini o'rnating:
+`firebase` paketi allaqachon `package.json` da. Firestore frontend'ga to'liq ulangan:
 
-```bash
-bun add firebase
-```
+- O'qish (katalog, mahsulot, filial, aksiya, sozlama, sharhlar) — `src/services/firebase.ts` + Zustand store'lar orqali to'g'ridan-to'g'ri Firestore'dan (read-only rules).
+- Yozish (buyurtma, status, admin CRUD) — bot serveridagi `/api` endpointlari orqali (Admin SDK). Client hech qachon to'g'ridan Firestore'ga yozmaydi.
 
-5. `src/services/firebase.ts` ichidagi commented kodni faollashtiring.
-6. `src/services/productService.ts` va `orderService.ts` ichidagi Firestore variantlarini yoqing.
-
-### Frontend deploy (Netlify / Vercel)
+### Frontend deploy (Netlify / Vercel / Cloudflare)
 
 Build buyrug'i: `bun run build` · Output: `dist/` (yoki TanStack adapter chiqaradi).
 `.env` o'zgaruvchilarini hosting paneliga qo'shing.
@@ -95,41 +91,30 @@ Kolleksiyalar:
 - `categories`
 - `products`
 - `orders`
-- `settings/global` — single doc
+- `branches` — filiallar (admin paneldan tahrirlanadi)
+- `promotions`
+- `reviews`
+- `settings/global` — ommaviy do'kon sozlamalari (single doc)
+- `settings/contacts` — kontakt/ijtimoiy ma'lumotlar
 
-### Firestore Rules (boshlang'ich)
+### Firestore Rules
 
+Joriy rules loyiha rootidagi [`firestore.rules`](../firestore.rules) faylida. Asosiy tamoyil:
+**barcha o'qish ochiq joylar (`products`, `categories`, `branches`, `promotions`, `reviews`,
+`settings/global`) `read: if true`; barcha yozish va `orders` butunlay `if false`** — yozuv faqat
+bot serveridagi Admin SDK orqali, Telegram `initData` tekshiruvi bilan boradi. `orders` client
+SDK uchun o'qish ham yopiq (shaxsiy ma'lumot), foydalanuvchi buyurtmalarini `POST /api/orders/my`
+backend endpointidan oladi.
+
+### Firestore Indexes
+
+`POST /api/orders/my` `where(telegramId) + orderBy(createdAt desc)` so'rovini ishlatadi — bu
+composite index talab qiladi. Index [`firestore.indexes.json`](../firestore.indexes.json) da
+e'lon qilingan. Deploy qiling:
+
+```bash
+firebase deploy --only firestore:rules,firestore:indexes
 ```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{db}/documents {
-
-    function isAdmin() {
-      return request.auth != null
-        && get(/databases/$(db)/documents/settings/global).data.adminTelegramIds
-            .hasAny([request.auth.uid]);
-    }
-
-    match /products/{id}   { allow read: if true;  allow write: if isAdmin(); }
-    match /categories/{id} { allow read: if true;  allow write: if isAdmin(); }
-    match /settings/{id}   { allow read: if true;  allow write: if isAdmin(); }
-
-    match /users/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
-    }
-
-    match /orders/{id} {
-      // Foydalanuvchi faqat o'z buyurtmalarini ko'radi.
-      allow read: if request.auth != null
-        && (resource.data.telegramId == int(request.auth.uid) || isAdmin());
-      // Yozish faqat server (Admin SDK) orqali.
-      allow create, update, delete: if isAdmin();
-    }
-  }
-}
-```
-
-> Eslatma: real loyihada Firebase Auth + custom claims orqali admin'ni belgilash tavsiya etiladi.
 
 ---
 
@@ -145,8 +130,10 @@ service cloud.firestore {
 ### Xavfsizlik
 
 - Bot tokeni faqat serverda (`bot/.env`)
-- `verifyTelegramInitData.js` — initData hash tekshiruvi
-- Order narxlari serverda qayta hisoblanishi shart (`bot/src/index.js` ichida TODO qo'yilgan)
+- `verifyTelegramInitData.js` — initData hash tekshiruvi (timing-safe, auth_date eskirish oynasi)
+- Order narxlari serverda Firestore'dan qayta hisoblanadi (`priceService.js → recalculateCart`) —
+  client yuborgan narxlarga ishonilmaydi
+- Idempotentlik: har checkout `clientOrderId` yuboradi; takroriy so'rov dublikat buyurtma yaratmaydi
 
 ---
 
@@ -166,11 +153,22 @@ service cloud.firestore {
 
 ---
 
-## 6. Keyingi qadamlar
+## 6. Ishga tushirish checklist (deploy)
 
-- [ ] Firebase paketini o'rnating va `src/services/firebase.ts` yoqing
-- [ ] Mock data o'rniga Firestore'dan o'qing
-- [ ] Frontend → bot API uchun `/api/orders` chaqirig'ini qo'shing
-- [ ] BotFather'da Web App URL ni kiriting
-- [ ] Bot va frontend'ni deploy qiling
-- [ ] Admin Telegram ID'larni `settings/global`'ga qo'shing
+- [ ] Frontend `.env` (`VITE_*`) ni hosting paneliga qo'shing
+- [ ] Bot `.env` (`BOT_TOKEN`, `ADMIN_TELEGRAM_IDS`, `ADMIN_CHAT_ID`, `FIREBASE_SERVICE_ACCOUNT`,
+      `CORS_ORIGIN`, `WEB_APP_URL`) ni bot host paneliga qo'shing
+- [ ] `firebase deploy --only firestore:rules,firestore:indexes`
+- [ ] Filiallarni admin paneldan Firestore `branches` ga kiriting (aks holda default `main` ishlatiladi)
+- [ ] BotFather'da Web App URL (`/setmenubutton`) va domen (`/setdomain`) ni kiriting
+- [ ] Bot va frontend'ni deploy qiling, `/healthz/telegram` orqali webhook holatini tekshiring
+
+## 7. Testlar
+
+```bash
+# Frontend (vitest)
+bun run test            # yoki: npx vitest run
+
+# Bot (node:test)
+cd bot && npm test
+```

@@ -17,8 +17,10 @@ export function generateTimeSlots(branch: Branch, stepMin = 30): string[] {
   const rounded = Math.ceil(min / stepMin) * stepMin;
   cursor.setMinutes(rounded, 0, 0);
 
+  // Yopilish vaqtining O'ZI kiritilmaydi: backend ish vaqti oynasini yuqori chegarada
+  // istisno qiladi (target < toMinutes), shuning uchun "cursor < end".
   const slots: string[] = [];
-  while (cursor <= end && slots.length < 24) {
+  while (cursor < end && slots.length < 24) {
     const hh = String(cursor.getHours()).padStart(2, "0");
     const mm = String(cursor.getMinutes()).padStart(2, "0");
     slots.push(`${hh}:${mm}`);

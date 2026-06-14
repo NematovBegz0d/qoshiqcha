@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ChevronLeft, Banknote, CreditCard, Wallet, Loader2, ShoppingBag } from "lucide-react";
 import { useCart } from "@/store/cartStore";
 import { useUser } from "@/store/userStore";
@@ -14,6 +14,15 @@ import { useT } from "@/lib/i18n";
 export const Route = createFileRoute("/checkout")({
   component: CheckoutPage,
 });
+
+// Idempotentlik kaliti generatori — tarmoq qayta urinishida dublikat buyurtma
+// yaratilmasligi uchun bitta checkout davomida barqaror bo'lib qoladi.
+function makeClientOrderId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `o-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
 
 function CheckoutPage() {
   const navigate = useNavigate();
@@ -38,6 +47,10 @@ function CheckoutPage() {
   const [comment, setComment] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Bitta checkout uchun barqaror idempotentlik kaliti (qayta urinishlarda o'zgarmaydi).
+  const clientOrderIdRef = useRef<string>("");
+  if (!clientOrderIdRef.current) clientOrderIdRef.current = makeClientOrderId();
 
   const address = addresses.find((a) => a.id === defaultAddressId) ?? addresses[0];
   const pickupBranch = branches.find((b) => b.id === pickupBranchId);
@@ -160,6 +173,7 @@ function CheckoutPage() {
         phone: phoneInput.trim(),
         paymentType: payment,
         comment: comment.trim().slice(0, 500),
+        clientOrderId: clientOrderIdRef.current,
       };
 
       const result = await submitOrderToBackend(initData, payload);
@@ -170,6 +184,8 @@ function CheckoutPage() {
       notify("success");
       haptic("heavy");
       clear();
+      // Keyingi buyurtma yangi idempotentlik kaliti olishi uchun yangilaymiz.
+      clientOrderIdRef.current = makeClientOrderId();
       navigate({ to: "/order-success", search: { id: result.order.id } });
     } catch (err) {
       haptic("medium");

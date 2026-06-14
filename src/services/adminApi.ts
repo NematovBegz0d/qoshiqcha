@@ -1,5 +1,13 @@
 import { tg } from "@/lib/telegram";
-import type { Branch, BusinessContacts, Category, OrderStatus, Product, Promotion, Settings } from "@/lib/types";
+import type {
+  Branch,
+  BusinessContacts,
+  Category,
+  OrderStatus,
+  Product,
+  Promotion,
+  Settings,
+} from "@/lib/types";
 
 const BASE = (
   (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:3005"

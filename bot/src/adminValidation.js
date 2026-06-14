@@ -380,7 +380,8 @@ export function cleanContactsPatch(patch) {
   const cleaned = {};
 
   if ("contacts" in patch) {
-    if (!Array.isArray(patch.contacts)) throw new ValidationError("contacts ro'yxat bo'lishi kerak");
+    if (!Array.isArray(patch.contacts))
+      throw new ValidationError("contacts ro'yxat bo'lishi kerak");
     if (patch.contacts.length > 10) throw new ValidationError("contacts 10 tadan oshmasin");
     cleaned.contacts = patch.contacts.map((c, i) => {
       if (!isPlainObject(c)) throw new ValidationError(`Kontakt #${i + 1} noto'g'ri`);

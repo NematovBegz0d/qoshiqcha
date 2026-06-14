@@ -29,10 +29,26 @@ interface YMap {
   destroy(): void;
 }
 
+interface YGeoObject {
+  getAddressLine(): string;
+  getThoroughfare(): string;
+  getPremiseNumber(): string;
+  getLocalities(): string[];
+  geometry: { getCoordinates(): [number, number] } | null;
+}
+
+interface YGeoResult {
+  geoObjects: {
+    get(index: number): YGeoObject | undefined;
+    getLength(): number;
+  };
+}
+
 interface YMaps {
   ready(cb: () => void): void;
   Map: new (el: HTMLElement, state: object, opts?: object) => YMap;
   Placemark: new (c: [number, number], props?: object, opts?: object) => YPlacemark;
+  geocode(request: string | [number, number], options?: object): Promise<YGeoResult>;
 }
 
 declare global {
@@ -132,6 +148,75 @@ async function nominatimSearch(q: string): Promise<SuggestItem[]> {
   }));
 }
 
+// ── Yandex geokoder (asosiy) ──────────────────────────────────────────────────
+// Xarita allaqachon Yandex API kaliti bilan yuklanadi; geokodingni ham Yandex
+// orqali qilamiz — Nominatim (OSM jamoat serveri) ToS/rate-limit muammosi yo'q,
+// O'zbekistonda qamrov ham yaxshiroq.
+
+// O'zbekiston chegara qutisi [SW [lat,lng], NE [lat,lng]] — qidiruvni yo'naltirish uchun.
+const UZ_BOUNDS: [[number, number], [number, number]] = [
+  [37.0, 56.0],
+  [45.6, 73.2],
+];
+
+function shortYandexAddress(obj: YGeoObject): string {
+  const street = obj.getThoroughfare() || "";
+  const house = obj.getPremiseNumber() || "";
+  const city = obj.getLocalities()?.[0] || "";
+  const streetHouse = [street, house].filter(Boolean).join(" ");
+  if (streetHouse && city) return `${streetHouse}, ${city}`;
+  if (streetHouse) return streetHouse;
+  // To'liq qatordan mamlakat prefiksini olib tashlab qisqartiramiz.
+  return obj.getAddressLine().replace(/^(O['‘`]?zbekiston|Узбекистан|Uzbekistan),?\s*/i, "");
+}
+
+async function yandexReverse(c: Coords): Promise<string> {
+  const ym = await loadYmaps();
+  const res = await ym.geocode([c.lat, c.lng], { results: 1 });
+  const obj = res.geoObjects.get(0);
+  if (!obj) throw new Error("Yandex reverse: natija topilmadi");
+  return shortYandexAddress(obj);
+}
+
+async function yandexSearch(q: string): Promise<SuggestItem[]> {
+  const ym = await loadYmaps();
+  const res = await ym.geocode(q, { results: 5, boundedBy: UZ_BOUNDS });
+  const items: SuggestItem[] = [];
+  const len = res.geoObjects.getLength();
+  for (let i = 0; i < len; i++) {
+    const obj = res.geoObjects.get(i);
+    const coords = obj?.geometry?.getCoordinates();
+    if (!obj || !coords) continue;
+    items.push({ label: shortYandexAddress(obj), lat: coords[0], lng: coords[1] });
+  }
+  return items;
+}
+
+// ── Provayder-agnostik: Yandex (kalit bo'lsa) → Nominatim (fallback) ──────────
+
+async function reverseAddress(c: Coords): Promise<string> {
+  if (YANDEX_KEY) {
+    try {
+      return await yandexReverse(c);
+    } catch {
+      // Yandex ishlamasa, Nominatim'ga tushamiz
+    }
+  }
+  return nominatimReverse(c);
+}
+
+async function searchAddress(q: string): Promise<SuggestItem[]> {
+  if (YANDEX_KEY) {
+    try {
+      const results = await yandexSearch(q);
+      if (results.length > 0) return results;
+    } catch {
+      // Yandex ishlamasa, Nominatim'ga tushamiz
+    }
+  }
+  return nominatimSearch(q);
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function DeliveryMapSheet({
@@ -170,7 +255,7 @@ export function DeliveryMapSheet({
   async function reverseGeocode(c: Coords) {
     setAddrLoading(true);
     try {
-      const addr = await nominatimReverse(c);
+      const addr = await reverseAddress(c);
       setInputValue(addr);
     } catch {
       // foydalanuvchi qo'lda kiritadi
@@ -267,11 +352,15 @@ export function DeliveryMapSheet({
         if (lm) {
           lm.init(() => {
             if (!lm.isLocationAvailable) {
-              reject(new Error(t(
-                "Местоположение недоступно в Telegram.",
-                "Location not available in Telegram.",
-                "Telegram versiyangizda joylashuv mavjud emas.",
-              )));
+              reject(
+                new Error(
+                  t(
+                    "Местоположение недоступно в Telegram.",
+                    "Location not available in Telegram.",
+                    "Telegram versiyangizda joylashuv mavjud emas.",
+                  ),
+                ),
+              );
               return;
             }
             lm.getLocation((loc) => {
@@ -281,11 +370,15 @@ export function DeliveryMapSheet({
                 lm.openSettings();
                 reject(new Error("__settings__"));
               } else {
-                reject(new Error(t(
-                  "Местоположение не определено. Попробуйте ещё раз.",
-                  "Location not found. Try again.",
-                  "Joylashuv aniqlanmadi. Qayta urinib ko'ring.",
-                )));
+                reject(
+                  new Error(
+                    t(
+                      "Местоположение не определено. Попробуйте ещё раз.",
+                      "Location not found. Try again.",
+                      "Joylashuv aniqlanmadi. Qayta urinib ko'ring.",
+                    ),
+                  ),
+                );
               }
             });
           });
@@ -294,34 +387,50 @@ export function DeliveryMapSheet({
 
         // 2. navigator.geolocation fallback
         if (!navigator.geolocation) {
-          reject(new Error(t(
-            "Геолокация не поддерживается",
-            "Geolocation not supported",
-            "Brauzeringiz geolokatsiyani qo'llab-quvvatlamaydi",
-          )));
+          reject(
+            new Error(
+              t(
+                "Геолокация не поддерживается",
+                "Geolocation not supported",
+                "Brauzeringiz geolokatsiyani qo'llab-quvvatlamaydi",
+              ),
+            ),
+          );
           return;
         }
         navigator.geolocation.getCurrentPosition(
           (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
           (err) => {
             if (err.code === err.PERMISSION_DENIED) {
-              reject(new Error(t(
-                "Доступ к геолокации запрещён. Разрешите в настройках.",
-                "Location permission denied. Allow it in settings.",
-                "Joylashuv ruxsati berilmagan. Sozlamalarda ruxsat bering.",
-              )));
+              reject(
+                new Error(
+                  t(
+                    "Доступ к геолокации запрещён. Разрешите в настройках.",
+                    "Location permission denied. Allow it in settings.",
+                    "Joylashuv ruxsati berilmagan. Sozlamalarda ruxsat bering.",
+                  ),
+                ),
+              );
             } else if (err.code === err.TIMEOUT) {
-              reject(new Error(t(
-                "Время истекло. Введите адрес вручную.",
-                "Timed out. Enter address manually.",
-                "Vaqt tugadi. Manzilni qidiruv orqali kiriting.",
-              )));
+              reject(
+                new Error(
+                  t(
+                    "Время истекло. Введите адрес вручную.",
+                    "Timed out. Enter address manually.",
+                    "Vaqt tugadi. Manzilni qidiruv orqali kiriting.",
+                  ),
+                ),
+              );
             } else {
-              reject(new Error(t(
-                "Местоположение недоступно. Введите адрес вручную.",
-                "Location unavailable. Enter address manually.",
-                "Joylashuv aniqlanmadi. Manzilni qidiruv orqali kiriting.",
-              )));
+              reject(
+                new Error(
+                  t(
+                    "Местоположение недоступно. Введите адрес вручную.",
+                    "Location unavailable. Enter address manually.",
+                    "Joylashuv aniqlanmadi. Manzilni qidiruv orqali kiriting.",
+                  ),
+                ),
+              );
             }
           },
           { enableHighAccuracy: false, timeout: 12000, maximumAge: 30000 },
@@ -353,7 +462,7 @@ export function DeliveryMapSheet({
     suggestTimer.current = setTimeout(async () => {
       setSuggestLoading(true);
       try {
-        const results = await nominatimSearch(v);
+        const results = await searchAddress(v);
         setSuggests(results);
       } catch {
         setSuggests([]);

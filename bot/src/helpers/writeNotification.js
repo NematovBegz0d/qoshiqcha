@@ -1,29 +1,31 @@
+// Eslatma: orderNumber generateOrderNumber() dan keladi va allaqachon "#" bilan
+// boshlanadi (masalan "#A1B2C34567"), shuning uchun bu yerda "#" qo'shilmaydi.
 const STATUS_NOTIFICATIONS = {
   accepted: {
     title: "Buyurtmangiz qabul qilindi ✅",
-    body: (orderNumber) => `#${orderNumber} buyurtmangiz tayyorlanishga qabul qilindi`,
+    body: (orderNumber) => `${orderNumber} buyurtmangiz tayyorlanishga qabul qilindi`,
   },
   preparing: {
     title: "Tayyorlanmoqda 🍳",
-    body: (orderNumber) => `#${orderNumber} buyurtmangiz tayyorlanmoqda`,
+    body: (orderNumber) => `${orderNumber} buyurtmangiz tayyorlanmoqda`,
   },
   delivering: {
     delivery: {
       title: "Buyurtma yo'lda 🚗",
-      body: (orderNumber) => `#${orderNumber} kuryerga topshirildi`,
+      body: (orderNumber) => `${orderNumber} kuryerga topshirildi`,
     },
     pickup: {
       title: "Tayyor! Olib keting 🎉",
-      body: (orderNumber) => `#${orderNumber} buyurtmangiz tayyor`,
+      body: (orderNumber) => `${orderNumber} buyurtmangiz tayyor`,
     },
   },
   completed: {
     title: "Buyurtma yakunlandi ✅",
-    body: (orderNumber) => `#${orderNumber} muvaffaqiyatli yetkazildi`,
+    body: (orderNumber) => `${orderNumber} muvaffaqiyatli yetkazildi`,
   },
   cancelled: {
     title: "Buyurtma bekor qilindi ❌",
-    body: (orderNumber) => `#${orderNumber} bekor qilindi`,
+    body: (orderNumber) => `${orderNumber} bekor qilindi`,
   },
 };
 

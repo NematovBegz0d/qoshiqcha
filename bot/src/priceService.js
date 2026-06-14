@@ -1,5 +1,4 @@
 import crypto from "crypto";
-import { db } from "./firebaseAdmin.js";
 import { env } from "./config/env.js";
 
 // ─── Validation Error ──────────────────────────────────────────────────────
@@ -32,8 +31,9 @@ const SETTINGS_DEFAULTS = {
  * Firestore settings/global dan o'qiydi.
  * - doc yo'q → SETTINGS_DEFAULTS qaytaradi (log bilan)
  * - Firestore xato (network, permission) → throw qiladi → 500 ga boradi
+ * @param {FirebaseFirestore.Firestore} db
  */
-export async function getSettings() {
+export async function getSettings(db) {
   const snap = await db.collection("settings").doc("global").get();
   if (!snap.exists) {
     console.warn("[priceService] settings/global topilmadi — default ishlatilmoqda");
@@ -263,21 +263,19 @@ function resolveAndValidateModifiers(product, selectedModifiers) {
  * Har bir cart item uchun Firestore'dan mahsulotni o'qiydi,
  * active holatini va narx to'g'riligini tekshirib, qayta hisoblaydi.
  *
+ * @param {FirebaseFirestore.Firestore} db
  * @param {Array} cartItems — frontenddan kelgan items[]
  * @returns {{ recalculatedItems: Array, itemsTotal: number }}
  * @throws {ValidationError} — validatsiya xatolarida
  * @throws {Error}           — Firestore xatolarida (→ 500)
  */
-export async function recalculateCart(cartItems) {
+export async function recalculateCart(db, cartItems) {
   if (!Array.isArray(cartItems) || cartItems.length === 0) {
     throw new ValidationError("Savat bo'sh");
   }
 
-  const recalculatedItems = [];
-  let itemsTotal = 0;
-
+  // ── 1-bosqich: item tuzilishini tekshirish + unikal productId'larni yig'ish ──
   for (const item of cartItems) {
-    // ── Item tuzilishini tekshirish ────────────────────────────────────────
     if (!item.productId || typeof item.productId !== "string") {
       throw new ValidationError("Mahsulot ID noto'g'ri formatda");
     }
@@ -285,10 +283,23 @@ export async function recalculateCart(cartItems) {
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > 99) {
       throw new ValidationError(`Noto'g'ri miqdor: ${item.productId}`);
     }
+  }
 
-    // ── Firestore'dan mahsulotni o'qish ───────────────────────────────────
-    const productSnap = await db.collection("products").doc(item.productId).get();
-    if (!productSnap.exists) {
+  // ── 2-bosqich: barcha mahsulotni BITTA batch o'qishda olish (N+1 emas) ──────
+  const uniqueIds = [...new Set(cartItems.map((item) => item.productId))];
+  const refs = uniqueIds.map((id) => db.collection("products").doc(id));
+  const snaps = await db.getAll(...refs);
+  const productById = new Map(snaps.map((snap) => [snap.id, snap]));
+
+  const recalculatedItems = [];
+  let itemsTotal = 0;
+
+  for (const item of cartItems) {
+    const quantity = Number(item.quantity);
+
+    // ── Batch natijasidan mahsulotni olish ────────────────────────────────
+    const productSnap = productById.get(item.productId);
+    if (!productSnap || !productSnap.exists) {
       throw new ValidationError(
         `Mahsulot topilmadi: ${item.productId}. Menyu yangilangan bo'lishi mumkin.`,
       );

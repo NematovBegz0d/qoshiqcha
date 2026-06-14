@@ -76,6 +76,8 @@ export type OrderPayload = {
   phone: string;
   paymentType: "cash" | "card_courier";
   comment?: string;
+  // Idempotentlik kaliti — bir xil kalitli takroriy so'rov dublikat buyurtma yaratmaydi.
+  clientOrderId: string;
 };
 
 export type BackendOrderResult = {
