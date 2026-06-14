@@ -6,5 +6,4 @@ export const settings: Settings = {
   minOrderPrice: 25000,
   workingHours: { from: "09:00", to: "00:00" },
   shopIsOpen: true,
-  adminTelegramIds: [],
 };

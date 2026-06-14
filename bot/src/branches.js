@@ -1,45 +1,52 @@
-import { db } from "./firebaseAdmin.js";
-
-// Firestore `branches` kolleksiyasi — filiallarning yagona haqiqat manbai.
-// Admin panel ulardagi nom/ish vaqti/koordinatani tahrirlaydi (adminBranches.js).
+// Filiallar manbasi — Firestore "branches" kolleksiyasi (admin panel orqali boshqariladi).
 //
-// Quyidagi DEFAULT_BRANCHES faqat Firestore hali bo'sh bo'lgan holatda ishlatiladi
-// va frontend src/data/businessInfo.ts `defaultBranches` bilan BIR XIL bo'lishi SHART
-// (id, openFrom, openTo). Aks holda olib-ketish buyurtmasi validatsiyadan o'tmaydi.
+// MUHIM: Bu default ro'yxat frontend `src/data/businessInfo.ts` dagi
+// `defaultBranches` bilan MOS bo'lishi kerak (id, openFrom, openTo). U faqat
+// Firestore "branches" kolleksiyasi bo'sh bo'lganda ishlatiladigan zaxira
+// (fallback) hisoblanadi — xuddi frontend ham shu holatda `defaultBranches` ga
+// tushgani kabi. Aks holda olib-ketish buyurtmasi validatsiyadan o'tmaydi.
 export const DEFAULT_BRANCHES = Object.freeze([
   {
     id: "main",
     name: "Markaziy filial",
+    address: "Buxoro sh., Eski shahar, 1-uy",
+    phone: "+998 71 200 00 00",
+    hours: "09:00 - 00:00",
     openFrom: "09:00",
     openTo: "24:00",
+    lat: 39.7747,
+    lng: 64.4286,
   },
 ]);
 
-const DEFAULT_BY_ID = new Map(DEFAULT_BRANCHES.map((branch) => [branch.id, branch]));
-
-function normalizeBranch(id, data) {
-  return {
-    id,
-    name: typeof data.name === "string" && data.name.trim() ? data.name.trim() : "Filial",
-    openFrom: typeof data.openFrom === "string" ? data.openFrom : "09:00",
-    openTo: typeof data.openTo === "string" ? data.openTo : "24:00",
-  };
+function getDefaultBranchById(id) {
+  return DEFAULT_BRANCHES.find((branch) => branch.id === id) ?? null;
 }
 
 /**
- * Filialni id bo'yicha qaytaradi.
- * - Avval Firestore `branches/{id}` dan o'qiydi (admin tahrir qilgan manba).
- * - Topilmasa — faqat DEFAULT_BRANCHES dagi id bilan moslikni tekshiradi
- *   (Firestore hali to'ldirilmagan yangi o'rnatish holati).
- * @returns {Promise<{id, name, openFrom, openTo} | null>}
+ * Filialni ID bo'yicha topadi.
+ *
+ * Frontend bilan bir xil manbadan (Firestore "branches") o'qiydi:
+ *   1. Firestore "branches/{id}" hujjati bo'lsa — o'shani qaytaradi.
+ *   2. Firestore'da topilmasa — DEFAULT_BRANCHES zaxirasidan qidiradi
+ *      (Firestore bo'sh holatini frontend bilan moslash uchun).
+ *   3. Hech qayerda topilmasa — null.
+ *
+ * @param {FirebaseFirestore.Firestore} db
+ * @param {string} id
+ * @returns {Promise<object|null>}
  */
-export async function getBranchById(id) {
+export async function getBranchById(db, id) {
   if (!id || typeof id !== "string") return null;
 
-  const snap = await db.collection("branches").doc(id).get();
-  if (snap.exists) {
-    return normalizeBranch(id, snap.data() ?? {});
+  try {
+    const snap = await db.collection("branches").doc(id).get();
+    if (snap.exists) {
+      return { id: snap.id, ...snap.data() };
+    }
+  } catch (err) {
+    // Firestore xatosi — zaxiraga tushamiz, lekin logga yozamiz
+    console.error("[branches] Firestore o'qish xatosi:", err?.message ?? err);
   }
-
-  return DEFAULT_BY_ID.get(id) ?? null;
+  return getDefaultBranchById(id);
 }

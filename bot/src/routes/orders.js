@@ -66,13 +66,13 @@ function cleanAddress(address) {
   };
 }
 
-async function cleanPickup(pickup) {
+async function cleanPickup(db, pickup) {
   if (!pickup || typeof pickup !== "object" || Array.isArray(pickup)) {
     throw new ValidationError("Olib ketish uchun filial va vaqt kiritilmagan");
   }
 
   const branchId = cleanText(pickup.branchId, "Filial ID", { min: 1, max: 80 });
-  const branch = await getBranchById(branchId);
+  const branch = await getBranchById(db, branchId);
   if (!branch) {
     throw new ValidationError("Tanlangan filial topilmadi");
   }
@@ -190,7 +190,7 @@ export function createOrdersRouter({ db, admin, bot }) {
       }
 
       const safeAddress = orderType === "delivery" ? cleanAddress(order.address) : null;
-      const safePickup = orderType === "pickup" ? await cleanPickup(order.pickup) : null;
+      const safePickup = orderType === "pickup" ? await cleanPickup(db, order.pickup) : null;
 
       const { recalculatedItems, itemsTotal } = await recalculateCart(db, order.items);
 

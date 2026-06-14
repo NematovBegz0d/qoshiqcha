@@ -13,6 +13,7 @@ import { createAdminContactsRouter } from "./routes/adminContacts.js";
 import { createReviewsRouter } from "./routes/reviews.js";
 import { createNotificationsRouter } from "./routes/notifications.js";
 import { createRateLimit } from "./middleware/rateLimit.js";
+import { createHealthGuard } from "./middleware/healthAuth.js";
 import { env } from "./config/env.js";
 
 // ─── Startup checks ────────────────────────────────────────────────────────
@@ -98,7 +99,14 @@ app.get("/healthz", (_, res) =>
 
 // ─── Routes ────────────────────────────────────────────────────────────────
 
-app.get("/healthz/telegram", async (_, res) => {
+// Telegram diagnostika endpointlari — productionda HEALTH_CHECK_SECRET bilan himoyalanadi.
+// (ensure-webhook holatni o'zgartiradi; healthz/telegram bot ma'lumotini oshkor qiladi.)
+const healthGuard = createHealthGuard({
+  isProduction: env.IS_PRODUCTION,
+  secret: env.HEALTH_CHECK_SECRET,
+});
+
+app.get("/healthz/telegram", healthGuard, async (_, res) => {
   try {
     const [me, webhook] = await Promise.all([bot.telegram.getMe(), bot.telegram.getWebhookInfo()]);
     res.json({
@@ -116,7 +124,7 @@ app.get("/healthz/telegram", async (_, res) => {
     });
   }
 });
-app.get("/healthz/telegram/ensure-webhook", async (_, res) => {
+app.get("/healthz/telegram/ensure-webhook", healthGuard, async (_, res) => {
   if (!env.BOT_WEBHOOK_URL) {
     res.status(400).json({ ok: false, error: "BOT_WEBHOOK_URL is not configured" });
     return;

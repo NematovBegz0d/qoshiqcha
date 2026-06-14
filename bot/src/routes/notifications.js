@@ -43,12 +43,20 @@ export function createNotificationsRouter({ db }) {
         return res.status(400).json({ error: "Noto'g'ri ID" });
       }
 
-      await db
+      const ref = db
         .collection("notifications")
         .doc(String(req.tgUser.id))
         .collection("items")
-        .doc(notifId)
-        .update({ read: true });
+        .doc(notifId);
+
+      // Avval mavjudligini tekshiramiz: .update() yo'q hujjatda 500 beradi,
+      // .set(merge) esa bo'sh "fantom" hujjat yaratadi — ikkalasi ham noto'g'ri.
+      const snap = await ref.get();
+      if (!snap.exists) {
+        return res.status(404).json({ error: "Bildirishnoma topilmadi" });
+      }
+
+      await ref.update({ read: true });
 
       return res.json({ ok: true });
     } catch (err) {

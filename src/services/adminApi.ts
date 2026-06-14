@@ -8,31 +8,15 @@ import type {
   Promotion,
   Settings,
 } from "@/lib/types";
+import { apiRequest } from "@/services/api";
 
-const BASE = (
-  (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:3005"
-).replace(/\/$/, "");
-
-async function call<T = unknown>(
+function call<T = unknown>(
   method: "POST" | "PATCH" | "DELETE",
   path: string,
   body: Record<string, unknown> = {},
 ): Promise<T> {
   const initData = tg()?.initData ?? "";
-  let res: Response;
-  try {
-    res = await fetch(`${BASE}${path}`, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ initData, ...body }),
-    });
-  } catch {
-    throw new Error("Server bilan aloqa yo'q. Internetingizni tekshiring.");
-  }
-
-  const json = (await res.json().catch(() => ({}))) as { error?: string };
-  if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
-  return json as T;
+  return apiRequest<T>(method, path, { initData, ...body });
 }
 
 export const adminApi = {
