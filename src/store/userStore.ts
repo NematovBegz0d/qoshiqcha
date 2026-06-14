@@ -90,6 +90,16 @@ export const useUser = create<UserState>()(
           ),
         })),
     }),
-    { name: "qoshiqcha-user" },
+    {
+      name: "qoshiqcha-user",
+      // orders localStorage'da saqlanmaydi — ichida PII (telefon, manzil) bor.
+      // Sessiya ichida xotirada turadi; reload'dan keyin backenddan (useMyOrders) qayta yuklanadi.
+      partialize: (state) => ({
+        phone: state.phone,
+        profile: state.profile,
+        addresses: state.addresses,
+        defaultAddressId: state.defaultAddressId,
+      }),
+    },
   ),
 );

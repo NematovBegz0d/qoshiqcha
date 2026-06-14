@@ -44,9 +44,12 @@ function cleanReviewText(text) {
 }
 
 async function assertUserCanReviewProduct(db, telegramId, productId) {
+  // Eng yangi 100 ta buyurtmani tekshiramiz (orderBy bilan deterministik).
+  // telegramId + createdAt composite index ishlatiladi (firestore.indexes.json).
   const ordersSnap = await db
     .collection("orders")
     .where("telegramId", "==", telegramId)
+    .orderBy("createdAt", "desc")
     .limit(100)
     .get();
 

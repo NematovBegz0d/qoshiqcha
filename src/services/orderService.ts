@@ -1,9 +1,9 @@
 import { useUser } from "@/store/userStore";
 import type { Order, PickupInfo } from "@/lib/types";
+import { apiRequest, AuthError } from "@/services/api";
 
-const API_URL = (
-  (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:3005"
-).replace(/\/$/, "");
+// AuthError orqaga moslik uchun re-export qilinadi (avval shu modulda e'lon qilingan).
+export { AuthError };
 
 // ─── Local store operatsiyalari ────────────────────────────────────────────
 
@@ -27,13 +27,6 @@ export function getOrder(id: string): Order | undefined {
 }
 
 // ─── Backend API ───────────────────────────────────────────────────────────
-
-export class AuthError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "AuthError";
-  }
-}
 
 /**
  * Backendga yuboriladigan cart item formati.
@@ -84,28 +77,8 @@ export type BackendOrderResult = {
   order: Order;
 };
 
-async function postJson<T>(path: string, body: Record<string, unknown>): Promise<T> {
-  let res: Response;
-  try {
-    res = await fetch(`${API_URL}${path}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-  } catch {
-    throw new Error("Server bilan aloqa yo'q. Internetingizni tekshiring.");
-  }
-
-  if (res.status === 401) {
-    throw new AuthError("Telegram autentifikatsiya xatosi. Bot orqali qayta oching.");
-  }
-
-  if (!res.ok) {
-    const errorBody = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new Error(errorBody.error ?? `Server xatosi (${res.status}). Keyinroq urinib ko'ring.`);
-  }
-
-  return res.json() as Promise<T>;
+function postJson<T>(path: string, body: Record<string, unknown>): Promise<T> {
+  return apiRequest<T>("POST", path, body);
 }
 
 export async function fetchMyOrders(initData: string): Promise<Order[]> {

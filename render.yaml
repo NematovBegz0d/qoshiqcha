@@ -1,3 +1,7 @@
+# Render blueprint — backend bot (Express + Telegraf).
+# Yagona kanonik deploy konfiguratsiyasi (bot/render.yaml o'chirildi).
+#
+# Frontend (TanStack Start) alohida deploy qilinadi — README.md ga qarang.
 services:
   - type: web
     name: qoshiqcha-bot
@@ -22,9 +26,13 @@ services:
         sync: false
       - key: CORS_ORIGIN
         sync: false
+      # Webhook rejimi: BOT_WEBHOOK_URL avtomatik RENDER_EXTERNAL_URL + PATH dan olinadi.
       - key: BOT_POLLING
         value: "false"
       - key: BOT_WEBHOOK_PATH
         value: /telegram/webhook
       - key: BOT_WEBHOOK_SECRET
+        generateValue: true
+      # Telegram diagnostika endpointlari himoyasi (/healthz/telegram*).
+      - key: HEALTH_CHECK_SECRET
         generateValue: true
