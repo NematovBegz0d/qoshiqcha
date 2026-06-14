@@ -1,7 +1,6 @@
 import { getRedis } from "../redisClient.js";
 
-const TOO_MANY_REQUESTS_MESSAGE =
-  "Juda ko'p so'rov yuborildi. Birozdan keyin urinib ko'ring.";
+const TOO_MANY_REQUESTS_MESSAGE = "Juda ko'p so'rov yuborildi. Birozdan keyin urinib ko'ring.";
 
 export function getClientKey(req, name) {
   // Express `trust proxy` (index.js: app.set("trust proxy", 1)) req.ip ni
@@ -65,7 +64,10 @@ local ttl = redis.call('PTTL', KEYS[1])
 return {current, ttl}
 `;
 
-export function createRedisRateLimit(redis, { windowMs = 60_000, max = 60, name = "default" } = {}) {
+export function createRedisRateLimit(
+  redis,
+  { windowMs = 60_000, max = 60, name = "default" } = {},
+) {
   return async (req, res, next) => {
     const key = `ratelimit:${getClientKey(req, name)}`;
     try {

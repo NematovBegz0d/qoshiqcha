@@ -106,7 +106,6 @@ describe("createRateLimit — limit va 429", () => {
   });
 });
 
-
 // ─── createRedisRateLimit — distributed limiter (fake Redis) ─────────────────
 
 import { createRedisRateLimit } from "../middleware/rateLimit.js";

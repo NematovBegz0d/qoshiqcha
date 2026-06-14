@@ -144,12 +144,9 @@ describe("DEPENDENCY GIGIYENASI — ishlatilmagan paketlar package.json da yo'q"
     "@radix-ui/react-tooltip",
   ];
 
-  it.each(FORBIDDEN_DEPS)(
-    "ishlatilmagan paket qayta qo'shilmagan: %s",
-    (dep) => {
-      expect(deps[dep]).toBeUndefined();
-    },
-  );
+  it.each(FORBIDDEN_DEPS)("ishlatilmagan paket qayta qo'shilmagan: %s", (dep) => {
+    expect(deps[dep]).toBeUndefined();
+  });
 
   it("faqat bitta @radix-ui paketi qolgan (react-dialog)", () => {
     const radix = Object.keys(deps).filter((d) => d.startsWith("@radix-ui/"));
