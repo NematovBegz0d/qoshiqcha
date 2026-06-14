@@ -89,24 +89,12 @@ firebase deploy --only firestore:rules
 firebase deploy --only firestore:indexes   # /api/orders/my so'rovi shunga tayanadi
 ```
 
-## Texnik qarz — ishlatilmagan dependency'larni tozalash
+## Dependency gigiyenasi
 
-Quyidagi paketlar kodda ishlatilmaydi (faqat `@radix-ui/react-dialog` va
-`class-variance-authority` qoladi). Lockfile sinxron bo'lishi uchun ularni
-**lokal mashinada** olib tashlang (registry talab qilinadi):
+Ishlatilmagan paketlar tozalangan — runtime `dependencies` faqat kodda haqiqatan
+import qilinadigan paketlardan iborat (`@radix-ui` dan faqat `react-dialog` qolgan).
+Tozalik `src/__tests__/deadCode.test.ts` dagi guard testlar bilan himoyalangan:
+ishlatilmagan paket qayta qo'shilsa testlar yiqiladi.
 
-```bash
-npm uninstall \
-  @radix-ui/react-accordion @radix-ui/react-alert-dialog @radix-ui/react-aspect-ratio \
-  @radix-ui/react-avatar @radix-ui/react-checkbox @radix-ui/react-collapsible \
-  @radix-ui/react-context-menu @radix-ui/react-dropdown-menu @radix-ui/react-hover-card \
-  @radix-ui/react-label @radix-ui/react-menubar @radix-ui/react-navigation-menu \
-  @radix-ui/react-popover @radix-ui/react-progress @radix-ui/react-radio-group \
-  @radix-ui/react-scroll-area @radix-ui/react-select @radix-ui/react-separator \
-  @radix-ui/react-slider @radix-ui/react-switch @radix-ui/react-tabs \
-  @radix-ui/react-toggle @radix-ui/react-toggle-group @radix-ui/react-tooltip \
-  cmdk embla-carousel-react input-otp react-day-picker react-resizable-panels \
-  recharts vaul react-hook-form @hookform/resolvers date-fns
-```
+> Yangi paket qo'shganda uni haqiqatan import qiling; aks holda `npm test` ogohlantiradi.
 
-> Olib tashlashdan oldin `npm run build` va `npm test` bilan tasdiqlang.
