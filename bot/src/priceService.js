@@ -15,18 +15,47 @@ export function generateOrderNumber() {
 
 // ─── Firestore settings ────────────────────────────────────────────────────
 
+// Xavfsiz default ish vaqti. workingHours noto'g'ri sozlanganda shu ishlatiladi
+// (fail-open "doim ochiq" ham, fail-closed "doim yopiq" ham emas — fail-safe).
+export const DEFAULT_WORKING_HOURS = Object.freeze({ from: "09:00", to: "00:00" });
+
 const SETTINGS_DEFAULTS = {
   deliveryPrice: 15000,
   freeDeliveryFrom: 50000,
   minOrderPrice: 25000,
-  workingHours: { from: "09:00", to: "00:00" },
+  workingHours: { ...DEFAULT_WORKING_HOURS },
   shopIsOpen: true,
 };
+
+/**
+ * workingHours ni validatsiya qiladi.
+ * - Format to'g'ri (from/to "HH:MM") → o'zini qaytaradi.
+ * - Noto'g'ri (yo'q, noto'g'ri tur, buzuq format) → xavfsiz DEFAULT_WORKING_HOURS
+ *   (ogohlantirish bilan). Bu admin typo'si butun buyurtmani to'xtatib qo'ymasligi,
+ *   ayni paytda do'konni 24/7 ochiq qoldirmasligi uchun.
+ * @returns {{ from: string, to: string }}
+ */
+export function normalizeWorkingHours(workingHours) {
+  const from = workingHours?.from;
+  const to = workingHours?.to;
+  const fromMinutes = parseTimeToMinutes(from);
+  const toMinutes = parseTimeToMinutes(to, { allowEndOfDay: true });
+
+  if (fromMinutes === null || toMinutes === null) {
+    console.warn(
+      "[priceService] Noto'g'ri workingHours formati — xavfsiz default ish vaqtiga qaytilmoqda",
+    );
+    return { ...DEFAULT_WORKING_HOURS };
+  }
+
+  return { from, to };
+}
 
 /**
  * Firestore settings/global dan o'qiydi.
  * - doc yo'q → SETTINGS_DEFAULTS qaytaradi (log bilan)
  * - Firestore xato (network, permission) → throw qiladi → 500 ga boradi
+ * - workingHours har doim normallashtiriladi (buzuq format default'ga tushadi)
  * @param {FirebaseFirestore.Firestore} db
  */
 export async function getSettings(db) {
@@ -35,7 +64,9 @@ export async function getSettings(db) {
     console.warn("[priceService] settings/global topilmadi — default ishlatilmoqda");
     return { ...SETTINGS_DEFAULTS };
   }
-  return { ...SETTINGS_DEFAULTS, ...snap.data() };
+  const merged = { ...SETTINGS_DEFAULTS, ...snap.data() };
+  merged.workingHours = normalizeWorkingHours(merged.workingHours);
+  return merged;
 }
 
 // ─── Working hours check ───────────────────────────────────────────────────
@@ -48,7 +79,8 @@ export async function getSettings(db) {
  *   "09:00" → "00:00"  — "00:00" = yarim tun = 24:00 (ish kuni oxiri)
  *   "18:00" → "03:00"  — yarim tundan o'tuvchi ish vaqti
  *
- * Noto'g'ri format → xavfsiz default: true (ochiq deb hisoblash)
+ * Noto'g'ri format → null qaytaradi (chaqiruvchi qaror qabul qiladi;
+ * isWithinWorkingHours buni xavfsiz default ish vaqtiga aylantiradi).
  */
 export function parseTimeToMinutes(value, { allowEndOfDay = false } = {}) {
   if (typeof value !== "string") return null;
@@ -131,13 +163,15 @@ export function minutesUntilTimeInCurrentWindow(timeValue, workingHours) {
 }
 
 export function isWithinWorkingHours(workingHours) {
-  const { from, to } = workingHours ?? {};
+  // Noto'g'ri format fail-open EMAS: normalizeWorkingHours buzuq sozlamani
+  // xavfsiz default ish vaqtiga aylantiradi va shu bo'yicha baholanadi.
+  const { from, to } = normalizeWorkingHours(workingHours);
   const fromMinutes = parseTimeToMinutes(from);
   const toMinutes = parseTimeToMinutes(to, { allowEndOfDay: true });
 
+  // normalizeWorkingHours valid qiymat kafolatlaydi; bu himoya uchun.
   if (fromMinutes === null || toMinutes === null) {
-    console.warn("[priceService] Noto'g'ri workingHours formati — ochiq deb hisoblanmoqda");
-    return true;
+    return false;
   }
 
   const currentMinutes = getCurrentMinutesInTimeZone();

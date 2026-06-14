@@ -59,6 +59,7 @@ npm start
 - `ADMIN_CHAT_ID` — admin guruh ID (botni admin qiling)
 - `ADMIN_TELEGRAM_IDS` — admin user ID'lar (vergul bilan)
 - `FIREBASE_SERVICE_ACCOUNT` — service account JSON (Firebase Console → Project Settings → Service accounts → Generate)
+- `REDIS_URL` — *(ixtiyoriy)* distributed rate limit uchun Redis ulanishi. Bir nechta instance ishlatilganda kerak (pastdagi "Rate limit va scaling" bo'limiga qarang).
 
 ### BotFather'da Mini App sozlash
 
@@ -69,6 +70,27 @@ npm start
 ### Bot deploy
 
 **Render** / **Railway** / **VPS** — har qanday Node host. Build: `npm install` · Start: `npm start`. WebSocket kerak emas.
+
+### Rate limit va scaling (Redis)
+
+`/api` endpointlari rate limit bilan himoyalangan. Ikki rejim bor:
+
+- **In-memory (default)** — `REDIS_URL` sozlanmagan bo'lsa. Hisob process xotirasida
+  saqlanadi. **Faqat yagona instance uchun to'g'ri**: bir nechta instance/replica
+  ishlatilsa, har biri o'z hisobini yuritadi va amaldagi limit instance soniga ko'paygandek
+  bo'ladi.
+- **Distributed (Redis)** — `REDIS_URL` berilsa. Hisob atomik Lua script bilan Redis'da
+  yuritiladi; barcha instance bitta umumiy limitni baham ko'radi. Horizontal scaling uchun shu
+  rejimni ishlating.
+
+```
+# Misol (Upstash / Render Redis)
+REDIS_URL=rediss://default:password@host:port
+```
+
+> **Fail-open:** Redis vaqtincha uzilsa, rate limit so'rovlarni bloklamaydi — API ishlashda davom
+> etadi (xato log qilinadi). Bu mavjudlikni (availability) qattiq limitlashdan ustun qo'yadi.
+
 
 0 budjetli hostlarda, masalan Render Free, service uxlab qolishi mumkin. Bunday joyda polling o'rniga webhook ishlating:
 

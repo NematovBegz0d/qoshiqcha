@@ -51,7 +51,7 @@ describe("getBranchById — Firestore'dan o'qish", () => {
     assert.equal(branch.openTo, "22:00");
   });
 
-  it("Firestore'da topilmagan, lekin DEFAULT_BRANCHES da bor (\"main\") → zaxira qaytadi", async () => {
+  it('Firestore\'da topilmagan, lekin DEFAULT_BRANCHES da bor ("main") → zaxira qaytadi', async () => {
     const db = makeFakeDb({}); // bo'sh Firestore
     const branch = await getBranchById(db, "main");
     assert.ok(branch, "default 'main' filial qaytishi kerak");
@@ -65,7 +65,7 @@ describe("getBranchById — Firestore'dan o'qish", () => {
     assert.equal(branch, null);
   });
 
-  it("Firestore xatosi → zaxiraga tushadi (\"main\" topiladi)", async () => {
+  it('Firestore xatosi → zaxiraga tushadi ("main" topiladi)', async () => {
     const db = makeFakeDb({}, { throwOnGet: true });
     const branch = await getBranchById(db, "main");
     assert.ok(branch, "Firestore xatosida ham default 'main' qaytishi kerak");
