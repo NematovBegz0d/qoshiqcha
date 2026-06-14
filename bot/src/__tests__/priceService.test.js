@@ -14,8 +14,15 @@ process.env.FIREBASE_SERVICE_ACCOUNT =
   });
 
 // priceService firebaseAdmin'ni import qilmaydi — db parametr orqali keladi.
-const { recalculateCart, getSettings, calcDeliveryPrice, ValidationError } =
-  await import("../priceService.js");
+const {
+  recalculateCart,
+  getSettings,
+  calcDeliveryPrice,
+  ValidationError,
+  isWithinWorkingHours,
+  normalizeWorkingHours,
+  DEFAULT_WORKING_HOURS,
+} = await import("../priceService.js");
 
 // ─── Fake Firestore (faqat kerakli usullar) ─────────────────────────────────
 
@@ -167,6 +174,51 @@ test("getSettings — doc yo'q bo'lsa to'liq default", async () => {
   const settings = await getSettings(db);
   assert.equal(settings.deliveryPrice, 15000);
   assert.equal(settings.minOrderPrice, 25000);
+});
+
+test("getSettings — noto'g'ri workingHours default ish vaqtiga normallashtiriladi", async () => {
+  const db = makeDb({}, { workingHours: { from: "xx", to: "yy" } });
+  const settings = await getSettings(db);
+  assert.deepEqual(settings.workingHours, DEFAULT_WORKING_HOURS);
+});
+
+test("getSettings — to'g'ri workingHours o'zgartirilmaydi", async () => {
+  const db = makeDb({}, { workingHours: { from: "10:00", to: "22:00" } });
+  const settings = await getSettings(db);
+  assert.deepEqual(settings.workingHours, { from: "10:00", to: "22:00" });
+});
+
+// ─── workingHours fail-safe (fail-open EMAS) ────────────────────────────────
+
+test("normalizeWorkingHours — to'g'ri format o'zgartirilmaydi", () => {
+  assert.deepEqual(normalizeWorkingHours({ from: "08:30", to: "21:00" }), {
+    from: "08:30",
+    to: "21:00",
+  });
+});
+
+test("normalizeWorkingHours — buzuq format default ga tushadi", () => {
+  assert.deepEqual(normalizeWorkingHours({ from: "bad", to: "00:00" }), DEFAULT_WORKING_HOURS);
+  assert.deepEqual(normalizeWorkingHours(null), DEFAULT_WORKING_HOURS);
+  assert.deepEqual(normalizeWorkingHours({}), DEFAULT_WORKING_HOURS);
+  assert.deepEqual(normalizeWorkingHours("salom"), DEFAULT_WORKING_HOURS);
+});
+
+test("isWithinWorkingHours — to'liq sutka (00:00–00:00) doim ochiq", () => {
+  assert.equal(isWithinWorkingHours({ from: "00:00", to: "00:00" }), true);
+});
+
+test("isWithinWorkingHours — bo'sh oyna (12:00–12:00) doim yopiq", () => {
+  assert.equal(isWithinWorkingHours({ from: "12:00", to: "12:00" }), false);
+});
+
+test("isWithinWorkingHours — noto'g'ri format FAIL-OPEN emas (default kabi baholanadi)", () => {
+  // Avval doim true qaytarardi (fail-open). Endi default ish vaqtidek baholanishi kerak.
+  const baseline = isWithinWorkingHours(DEFAULT_WORKING_HOURS);
+  assert.equal(isWithinWorkingHours("garbage"), baseline);
+  assert.equal(isWithinWorkingHours({ from: "9", to: "x" }), baseline);
+  assert.equal(isWithinWorkingHours(null), baseline);
+  assert.equal(isWithinWorkingHours(undefined), baseline);
 });
 
 // ─── calcDeliveryPrice ──────────────────────────────────────────────────────
