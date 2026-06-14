@@ -105,3 +105,109 @@ describe("createRateLimit — limit va 429", () => {
     assert.equal(nextCount, 2);
   });
 });
+
+
+// ─── createRedisRateLimit — distributed limiter (fake Redis) ─────────────────
+
+import { createRedisRateLimit } from "../middleware/rateLimit.js";
+
+// Lua FIXED_WINDOW_SCRIPT xatti-harakatini taqlid qiluvchi minimal fake.
+// Bitta jarayonda hisoblaydi, lekin "shared" Redis kabi: bir nechta limiter
+// instance bir xil fake'ni ulashsa, hisob umumiy bo'ladi (distributed model).
+function makeFakeRedis() {
+  const store = new Map(); // key -> { count, resetAt }
+  return {
+    calls: 0,
+    async eval(_script, _numKeys, key, windowMs) {
+      this.calls++;
+      const now = Date.now();
+      const win = Number(windowMs);
+      let entry = store.get(key);
+      if (!entry || entry.resetAt <= now) {
+        entry = { count: 0, resetAt: now + win };
+        store.set(key, entry);
+      }
+      entry.count += 1;
+      const ttl = entry.resetAt - now;
+      return [entry.count, ttl];
+    },
+  };
+}
+
+function makeBrokenRedis() {
+  return {
+    async eval() {
+      throw new Error("ECONNREFUSED");
+    },
+  };
+}
+
+describe("createRedisRateLimit — distributed limit xulqi", () => {
+  it("max gacha o'tkazadi, max+1 da 429 + Retry-After", async () => {
+    const redis = makeFakeRedis();
+    const limiter = createRedisRateLimit(redis, { windowMs: 60_000, max: 2, name: "rtest" });
+    const req = { ip: "5.5.5.5", headers: {}, socket: {} };
+
+    let nextCount = 0;
+    const next = () => nextCount++;
+
+    await limiter(req, makeRes(), next);
+    await limiter(req, makeRes(), next);
+    assert.equal(nextCount, 2);
+
+    const res = makeRes();
+    await limiter(req, res, next);
+    assert.equal(nextCount, 2, "3-so'rov next() ni chaqirmasligi kerak");
+    assert.equal(res.statusCode, 429);
+    assert.ok(res.headers["Retry-After"], "Retry-After header bo'lishi kerak");
+    assert.match(res.body.error, /Juda ko'p/);
+  });
+
+  it("turli IP lar mustaqil hisoblanadi", async () => {
+    const redis = makeFakeRedis();
+    const limiter = createRedisRateLimit(redis, { windowMs: 60_000, max: 1, name: "riso" });
+    let nextCount = 0;
+    const next = () => nextCount++;
+
+    await limiter({ ip: "1.0.0.1", headers: {}, socket: {} }, makeRes(), next);
+    await limiter({ ip: "1.0.0.2", headers: {}, socket: {} }, makeRes(), next);
+    assert.equal(nextCount, 2);
+  });
+
+  it("DISTRIBUTED: ikki limiter (ikki instance) bir Redis'ni ulashadi → umumiy hisob", async () => {
+    const redis = makeFakeRedis(); // bitta shared Redis
+    const opts = { windowMs: 60_000, max: 2, name: "rshared" };
+    const instanceA = createRedisRateLimit(redis, opts);
+    const instanceB = createRedisRateLimit(redis, opts);
+    const req = { ip: "9.9.9.9", headers: {}, socket: {} };
+
+    let nextCount = 0;
+    const next = () => nextCount++;
+
+    await instanceA(req, makeRes(), next); // 1 (A)
+    await instanceB(req, makeRes(), next); // 2 (B)
+    assert.equal(nextCount, 2);
+
+    // 3-so'rov qaysi instance'da bo'lishidan qat'i nazar bloklanadi.
+    const res = makeRes();
+    await instanceB(req, res, next);
+    assert.equal(res.statusCode, 429, "umumiy hisob max dan oshdi → bloklanadi");
+    assert.equal(nextCount, 2);
+  });
+
+  it("FAIL-OPEN: Redis xato bersa so'rov o'tkaziladi", async () => {
+    const limiter = createRedisRateLimit(makeBrokenRedis(), {
+      windowMs: 60_000,
+      max: 1,
+      name: "rfail",
+    });
+    const req = { ip: "3.3.3.3", headers: {}, socket: {} };
+    let nextCount = 0;
+    const next = () => nextCount++;
+
+    const res = makeRes();
+    await limiter(req, res, next);
+    assert.equal(nextCount, 1, "Redis xatosida ham next() chaqirilishi kerak (fail-open)");
+    assert.notEqual(res.statusCode, 429);
+  });
+});
