@@ -121,6 +121,7 @@ export const env = Object.freeze({
   BOT_WEBHOOK_SECRET: normalizeWebhookSecret(),
   APP_TIME_ZONE: optionalString("APP_TIME_ZONE", "Asia/Tashkent"),
   MIN_PICKUP_LEAD_MINUTES: parsePositiveInteger("MIN_PICKUP_LEAD_MINUTES", 20),
+  HEALTH_CHECK_SECRET: optionalString("HEALTH_CHECK_SECRET"),
   FIREBASE_SERVICE_ACCOUNT: parseServiceAccount(),
 });
 

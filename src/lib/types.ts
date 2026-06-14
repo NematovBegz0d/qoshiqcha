@@ -110,8 +110,6 @@ export type Settings = {
   minOrderPrice: number;
   workingHours: { from: string; to: string };
   shopIsOpen: boolean;
-  adminTelegramIds: number[];
-  adminChatId?: string;
 };
 
 export type Branch = {

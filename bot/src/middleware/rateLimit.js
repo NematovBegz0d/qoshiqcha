@@ -1,13 +1,14 @@
 const buckets = new Map();
 
-function getClientKey(req, name) {
-  const forwardedFor = req.headers["x-forwarded-for"];
-  const ip = Array.isArray(forwardedFor)
-    ? forwardedFor[0]
-    : typeof forwardedFor === "string"
-      ? forwardedFor.split(",")[0]?.trim()
-      : req.ip;
-  return `${name}:${ip || req.socket?.remoteAddress || "unknown"}`;
+export function getClientKey(req, name) {
+  // Express `trust proxy` (index.js: app.set("trust proxy", 1)) req.ip ni
+  // ishonchli proxy soni bo'yicha to'g'ri aniqlaydi.
+  //
+  // X-Forwarded-For ni QO'LDA parse QILMAYMIZ: u mijoz tomonidan
+  // soxtalashtiriladi (spoofing) — har so'rovda turli qiymat yuborib
+  // hujumchi cheksiz yangi bucket olishi va rate limit ni chetlab o'tishi mumkin edi.
+  const ip = req.ip || req.socket?.remoteAddress || "unknown";
+  return `${name}:${ip}`;
 }
 
 export function createRateLimit({ windowMs = 60_000, max = 60, name = "default" } = {}) {
